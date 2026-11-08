@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 
 import '../core/currency.dart';
 import '../core/planning.dart';
+import '../core/round6.dart';
 import '../core/store.dart';
 import '../core/util.dart';
 import 'categories_screen.dart';
+import 'productivity_screens.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -28,6 +30,7 @@ class _TxEditScreenState extends State<TxEditScreen> {
   final amount = TextEditingController();
   final note = TextEditingController();
   String? catId, accId, planId;
+  List<String> tags = [];
   late String date;
   late String time;
 
@@ -39,6 +42,7 @@ class _TxEditScreenState extends State<TxEditScreen> {
     date = (e?['date'] ?? widget.presetDate ?? today()).toString();
     planId = e != null ? e['planId']?.toString() : widget.planId;
     catId = widget.presetCatId;
+    tags = ((e?['tags'] as List?) ?? const []).map((x) => '$x').toList();
     time = (e?['time'] ?? nowTime()).toString();
     if (e != null) {
       final a = toD(e['amount']);
@@ -79,7 +83,7 @@ class _TxEditScreenState extends State<TxEditScreen> {
       'date': date,
       'time': time,
       'note': note.text.trim(),
-      if (e == null) 'tags': <dynamic>[],
+      'tags': <dynamic>[...tags],
       if (e == null) 'receipt': null,
       'planId': type == 'expense' ? planId : null,
     };
@@ -214,6 +218,22 @@ class _TxEditScreenState extends State<TxEditScreen> {
             ]),
           ),
         ],
+        SectionTitle('Tags', action: '+ Add tag', onAction: () => showTagDialog(context, null)),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          for (final t in s.tags)
+            FilterChip(
+              label: Text('${t['name']}'),
+              selected: tags.contains(t['name']),
+              onSelected: (v) => setState(() {
+                if (v) {
+                  tags.add('${t['name']}');
+                } else {
+                  tags.remove(t['name']);
+                }
+              }),
+            ),
+          if (s.tags.isEmpty) Text('No tags yet', style: TextStyle(color: p.muted, fontSize: 13)),
+        ]),
         const SectionTitle('Note'),
         TextField(controller: note, maxLines: 3, minLines: 1, decoration: const InputDecoration(hintText: 'Add a note')),
         const SizedBox(height: 22),

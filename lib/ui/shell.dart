@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'budget_screens.dart';
-import 'coming_soon.dart';
+import 'analytics_screen.dart';
+import 'reports_screen.dart';
 import 'home_screen.dart';
 import 'side_menu.dart';
 import 'theme.dart';
@@ -72,8 +73,8 @@ class _ShellState extends State<Shell> {
     final pages = [
       const HomeScreen(),
       const BudgetTab(),
-      const ComingSoon(title: 'Analytics', icon: Icons.insights_rounded, round: 'Round 4'),
-      const ComingSoon(title: 'Reports', icon: Icons.description_outlined, round: 'Round 4'),
+      const AnalyticsTab(),
+      const ReportsTab(),
     ];
     return Scaffold(
       key: Shell.scaffoldKey,

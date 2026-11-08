@@ -10,7 +10,16 @@ This is the native rebuild of the Salli money manager. It signs in to **the same
 
 If a build turns red: open the failed step, copy the red error lines (or screenshot them) and send them to Claude to fix.
 
-## Round 5 (this version)
+## Round 6 (this version)
+- **Analytics tab**: General (10 spending highlights, daily income / expense bars, spending by account, category donut with drill-down), Expense Category and Income Category grids, last-12-month chips and a custom date range.
+- **Reports tab**: History of generated reports and the generator (This Month, Last Month, Last 3 / 6 / 12 Months, custom range). Report preview with the web report's sections: summary, Financial Health Score with breakdown and recommendations, Net Worth Statement, Cash Flow, Spending Analysis (category bar, day-of-week, transaction sizes), Budget Performance, Debt & Liabilities, Expense Prediction, Behavioral Insights, Top Transactions, Transaction List and Bank Statements — toggled in Export settings (shared with the web app). Copy summary to share. *(PDF / Excel files come in round 7.)*
+- **Customize Dashboard**: drag to reorder and switch Home widgets on / off (Due Soon, Balance Overview, My Accounts, Fixed Deposits, Recent Transactions, Spending Trend, Budget Progress, Upcoming Subscriptions, Installment Overview, Loan Overview, Expense Summary, Standing Orders) — same layout setting as the web app.
+- **Goals**: active / completed, new / edit (target, date, already saved, icon), goal page with ring, remaining, needed per month, **Add Money / Withdraw** (optionally from / to an account), mark completed, delete.
+- **To-Do List** and **Priority Board** (importance × urgency: Do first / Schedule / Delegate / Later, category, reasons, estimated cost in any currency).
+- **Tags**: add / rename (renames on every transaction) / delete; tag chips in Add / Edit transaction.
+- **Account Setup**: asset & liability groups (name, Assets / Liabilities, balance-sheet type), used by My Assets and the Financial Overview.
+
+## Round 5
 - **Loans**: Unpaid / Paid tabs, All / Bank / Personal filter, OVERDUE badges. Add / edit (bank or personal, lender, currency — locked after payments, amount, interest, tenure, first instalment, **agreed exchange rates** per currency with ⇄ swap, optional "money received into" account). Loan page with remaining balance (and main-currency value at the agreed rate), % repaid, EMI, loan information, upcoming schedule with interest / principal, **Pay now** (red **PAY NOW - OVERDUE** when late) in any currency with bank fee, payment history with **Edit / Delete payment**, edit / delete loan (removes its transactions like the web app).
 - **Loan Analyzer**: EMI, total interest / payable, principal vs interest bar, EMI-to-income check, extra monthly payment savings, yearly breakdown.
 - **Lendings**: Outstanding / Received, new / edit lending (currency, paid-from account with conversion), lending page with totals, progress, information, **Receive Payment** in any currency, payment history (edit / delete), timeline, delete.
@@ -53,7 +62,7 @@ If a build turns red: open the failed step, copy the red error lines (or screens
 - Loan, lending and other linked entries are shown but are edited in the web app for now, so their links stay correct. Their main-currency values use each loan's agreed rate, like the web app.
 
 ## Next rounds (plan)
-6. Goals, to-do, priority board, tags, account setup, customize dashboard, analytics, reports with PDF/Excel export, backup & restore, biometric lock, SMS, admin approvals, remaining settings.
+7. PDF / Excel report export & share, backup & restore (file + auto backup), PIN / biometric lock, SMS automation / drafts / parser, admin approvals, remaining settings (currency, exchange rates, notifications).
 
 ## Safety of your data
 The app keeps your cloud data exactly as the web app saved it and only changes the parts it knows about. Every upload sends the whole document back, so nothing the web app stores is lost.

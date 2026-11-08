@@ -4,6 +4,8 @@ import '../core/currency.dart';
 import '../core/util.dart';
 import 'accounts_screen.dart';
 import 'due_soon.dart';
+import 'home_widgets.dart';
+import '../core/round6.dart';
 import 'settings_screen.dart';
 import 'shell.dart';
 import 'theme.dart';
@@ -66,9 +68,13 @@ class HomeScreen extends StatelessWidget {
             sliver: SliverList.list(children: [
               _SyncChip(text: s.syncStatus, dirty: s.dirty),
               const SizedBox(height: 10),
-              const DueSoonCard(),
-              // ---- Net cash flow (this month)
-              GlassCard(
+              for (final w in s.widgetOrder)
+                if (!s.hiddenWidgets.contains(w))
+                  (switch (w) {
+                    'dues' => const DueSoonCard(),
+                    'balance' => Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: GlassCard(
                 gradient: LinearGradient(
                   begin: Alignment.topRight,
                   end: Alignment.bottomLeft,
@@ -92,9 +98,10 @@ class HomeScreen extends StatelessWidget {
                   ]),
                 ]),
               ),
-              const SizedBox(height: 14),
-              // ---- Accounts
-              GlassCard(
+                      ),
+                    'accounts' => Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: GlassCard(
                 onTap: () => Navigator.of(context).push(pageRoute(const AccountsScreen())),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Row(children: [
@@ -121,6 +128,10 @@ class HomeScreen extends StatelessWidget {
                     ),
                 ]),
               ),
+                      ),
+                    'recent' => Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               SectionTitle('Recent Transactions', action: 'See all', onAction: () => Navigator.of(context).push(pageRoute(const TransactionsScreen()))),
               if (top.isEmpty)
                 const EmptyNote('No transactions yet. Tap + to add your first one.')
@@ -131,6 +142,10 @@ class HomeScreen extends StatelessWidget {
                 onPressed: () => Navigator.of(context).push(pageRoute(const TransactionsScreen())),
                 child: const Text('See All Transactions'),
               ),
+                        ]),
+                      ),
+                    _ => HomeWidget(id: w),
+                  }),
             ]),
           ),
         ]),

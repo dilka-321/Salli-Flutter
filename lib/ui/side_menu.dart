@@ -10,12 +10,14 @@ import 'assets_screens.dart';
 import 'card_screen.dart';
 import 'categories_screen.dart';
 import 'coming_soon.dart';
+import 'goals_screens.dart';
 import 'installments_screens.dart';
 import 'lendings_screens.dart';
 import 'loans_screens.dart';
 import 'monthly_plan_screens.dart';
 import 'ot_screens.dart';
 import 'overview_screen.dart';
+import 'productivity_screens.dart';
 import 'recurring_screens.dart';
 import 'settings_screen.dart';
 import 'spending_plan_screens.dart';
@@ -103,7 +105,7 @@ class SideMenu extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
           child: GlassCard(
             padding: const EdgeInsets.all(14),
-            onTap: () => go(soon('SMS Automation', Icons.auto_awesome_rounded, 'a later round')),
+            onTap: () => go(soon('SMS Automation', Icons.auto_awesome_rounded, 'round 7')),
             gradient: LinearGradient(colors: [Color.alphaBlend(purple.withOpacity(.16), p.card), p.card]),
             child: Row(children: [
               Container(width: 46, height: 46, decoration: BoxDecoration(color: purple.withOpacity(.18), borderRadius: BorderRadius.circular(14)), child: Icon(Icons.auto_awesome_rounded, color: purple)),
@@ -123,8 +125,8 @@ class SideMenu extends StatelessWidget {
         item('Financial Overview', Icons.trending_up_rounded, blue, () => const OverviewScreen()),
         item('Credit Cards', Icons.credit_card_rounded, purple, () => const CardsListScreen()),
         item('Transfers', Icons.swap_horiz_rounded, orange, () => const TransfersScreen()),
-        item('SMS Drafts', Icons.sms_outlined, p.pos, () => soon('SMS Drafts', Icons.sms_outlined, 'a later round'), later: true),
-        item('SMS Parser', Icons.document_scanner_outlined, blue, () => soon('SMS Parser', Icons.document_scanner_outlined, 'a later round'), later: true),
+        item('SMS Drafts', Icons.sms_outlined, p.pos, () => soon('SMS Drafts', Icons.sms_outlined, 'round 7'), later: true),
+        item('SMS Parser', Icons.document_scanner_outlined, blue, () => soon('SMS Parser', Icons.document_scanner_outlined, 'round 7'), later: true),
         sec('PLANNING', orange),
         item('Monthly Plan', Icons.calendar_view_month_rounded, p.pos, () => const MonthlyPlansScreen()),
         item('Spending Plan', Icons.event_note_rounded, blue, () => const SpendingPlansScreen()),
@@ -138,19 +140,19 @@ class SideMenu extends StatelessWidget {
         item('My Assets', Icons.work_outline_rounded, p.pos, () => const AssetsScreen()),
         item('Installments', Icons.receipt_long_rounded, blue, () => const InstallmentsScreen()),
         sec('PRODUCTIVITY', blue),
-        item('Goals', Icons.savings_outlined, p.pos, () => soon('Goals', Icons.savings_outlined, 'round 6'), later: true),
-        item('To-Do List', Icons.check_box_outlined, blue, () => soon('To-Do List', Icons.check_box_outlined, 'round 6'), later: true),
-        item('Priority Board', Icons.assignment_outlined, purple, () => soon('Priority Board', Icons.assignment_outlined, 'round 6'), later: true),
+        item('Goals', Icons.savings_outlined, p.pos, () => const GoalsScreen()),
+        item('To-Do List', Icons.check_box_outlined, blue, () => const TodosScreen()),
+        item('Priority Board', Icons.assignment_outlined, purple, () => const PrioritiesScreen()),
         sec('SETTINGS', purple),
         item('Categories', Icons.grid_view_rounded, purple, () => const CategoriesScreen()),
-        item('Tags', Icons.sell_outlined, purple, () => soon('Tags', Icons.sell_outlined, 'round 6'), later: true),
-        item('Account Setup', Icons.home_outlined, blue, () => soon('Account Setup', Icons.home_outlined, 'round 6'), later: true),
-        item('Customize Dashboard', Icons.dashboard_customize_outlined, p.pos, () => soon('Customize Dashboard', Icons.dashboard_customize_outlined, 'round 6'), later: true),
-        item('Backup & Restore', Icons.cloud_upload_outlined, p.pos, () => soon('Backup & Restore', Icons.cloud_upload_outlined, 'round 6'), later: true),
+        item('Tags', Icons.sell_outlined, purple, () => const TagsScreen()),
+        item('Account Setup', Icons.home_outlined, blue, () => const AccountSetupScreen()),
+        item('Customize Dashboard', Icons.dashboard_customize_outlined, p.pos, () => const DashboardSetupScreen()),
+        item('Backup & Restore', Icons.cloud_upload_outlined, p.pos, () => soon('Backup & Restore', Icons.cloud_upload_outlined, 'round 7'), later: true),
         item('Settings', Icons.settings_outlined, blue, () => const SettingsScreen()),
         if (s.profile?['role'] == 'admin') ...[
           sec('ADMINISTRATION', p.pos),
-          item('Admin approvals', Icons.person_outline_rounded, blue, () => soon('Admin approvals', Icons.person_outline_rounded, 'round 6 (use the web app meanwhile)'), later: true),
+          item('Admin approvals', Icons.person_outline_rounded, blue, () => soon('Admin approvals', Icons.person_outline_rounded, 'round 7 (use the web app meanwhile)'), later: true),
         ],
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 22, 16, 30),

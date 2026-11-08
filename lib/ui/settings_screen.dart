@@ -96,7 +96,7 @@ class SettingsScreen extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('${AppConfig.appName} native · ${AppConfig.version}', style: const TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: 6),
-            Text('Native app round 5: dashboard with Due Soon, accounts, cards, transfers, categories, budgets, plans, OT & salary, subscriptions, recurring, installments, loans, lendings, assets & fixed deposits and Financial Overview. Remaining sections arrive in round 6.',
+            Text('Native app round 6: dashboard with Due Soon, accounts, cards, transfers, categories, budgets, plans, OT & salary, subscriptions, recurring, installments, loans, lendings, assets & fixed deposits, Financial Overview, goals, to-do, priority board, tags, account setup, dashboard layout, analytics and reports. Exports, backup, app lock, SMS and admin arrive in round 7.',
                 style: TextStyle(color: p.muted, fontSize: 13)),
           ]),
         ),
