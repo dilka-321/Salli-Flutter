@@ -1,0 +1,186 @@
+import 'package:flutter/material.dart';
+
+import '../core/currency.dart';
+import '../core/util.dart';
+import 'accounts_screen.dart';
+import 'settings_screen.dart';
+import 'theme.dart';
+import 'transactions_screen.dart';
+import 'widgets.dart';
+
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = StoreScope.of(context);
+    final p = Palette.of(context);
+    final name = ((s.profile?['full_name'] ?? s.settings['name'] ?? '').toString().trim());
+    final first = name.isEmpty ? 'there' : name.split(' ').first;
+    final mk = ym(today());
+    final st = s.stats(monthStart(mk), monthEnd(mk));
+    final net = st.cin - st.cout;
+    final recent = s.txns.toList()..sort((a, b) => ('${b['date']}${b['time'] ?? ''}').compareTo('${a['date']}${a['time'] ?? ''}'));
+    final top = recent.take(12).toList();
+
+    return Scaffold(
+      body: RefreshIndicator(
+        color: p.accent,
+        onRefresh: () async {
+          if (s.dirty) {
+            await s.syncNow();
+          } else {
+            await s.pullIfNewer();
+          }
+        },
+        child: CustomScrollView(slivers: [
+          SliverAppBar(
+            pinned: true,
+            toolbarHeight: 72,
+            backgroundColor: p.bg.withOpacity(.92),
+            title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Hi, $first', style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
+              Text('Welcome to Salli', style: TextStyle(fontSize: 13.5, color: p.muted, fontWeight: FontWeight.w400)),
+            ]),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: 14),
+                child: GestureDetector(
+                  onTap: () => Navigator.of(context).push(pageRoute(const SettingsScreen())),
+                  child: CircleAvatar(
+                    radius: 23,
+                    backgroundColor: p.accent.withOpacity(.2),
+                    child: Text(first.isEmpty ? 'S' : first[0].toUpperCase(), style: TextStyle(color: p.accent, fontWeight: FontWeight.w800, fontSize: 19)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 130),
+            sliver: SliverList.list(children: [
+              _SyncChip(text: s.syncStatus, dirty: s.dirty),
+              const SizedBox(height: 10),
+              // ---- Net cash flow (this month)
+              GlassCard(
+                gradient: LinearGradient(
+                  begin: Alignment.topRight,
+                  end: Alignment.bottomLeft,
+                  colors: [Color.alphaBlend(p.accent.withOpacity(.16), p.card), p.card],
+                ),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Net Cash Flow', style: TextStyle(color: p.muted, fontSize: 15)),
+                  const SizedBox(height: 6),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(money(net, s.base), style: TextStyle(fontSize: 34, fontWeight: FontWeight.w800, color: net < 0 ? p.neg : p.fg, letterSpacing: -.5)),
+                  ),
+                  const SizedBox(height: 4),
+                  Text('${fmtDate(monthStart(mk))} – ${fmtDate(monthEnd(mk))}', style: TextStyle(color: p.muted, fontSize: 13)),
+                  const SizedBox(height: 16),
+                  Row(children: [
+                    Expanded(child: _Mini(label: 'Cash In', value: money(st.cin, s.base), color: p.pos, icon: Icons.arrow_upward_rounded, sub: 'Income ${money(st.inc, s.base)}')),
+                    const SizedBox(width: 12),
+                    Expanded(child: _Mini(label: 'Cash Out', value: money(st.cout, s.base), color: p.neg, icon: Icons.arrow_downward_rounded, sub: 'Expense ${money(st.exp, s.base)}')),
+                  ]),
+                ]),
+              ),
+              const SizedBox(height: 14),
+              // ---- Accounts
+              GlassCard(
+                onTap: () => Navigator.of(context).push(pageRoute(const AccountsScreen())),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    const Expanded(child: Text('My Accounts', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800))),
+                    Text('See all', style: TextStyle(color: p.accent, fontWeight: FontWeight.w600)),
+                  ]),
+                  const SizedBox(height: 10),
+                  Text('All Accounts Balance', style: TextStyle(color: p.muted, fontSize: 13)),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(money(s.totalBalance, s.base), style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: -.4)),
+                  ),
+                  const SizedBox(height: 10),
+                  for (final a in s.wallets.take(4))
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      child: Row(children: [
+                        Icon(Icons.account_balance_wallet_outlined, size: 18, color: p.muted),
+                        const SizedBox(width: 10),
+                        Expanded(child: Text('${a['name']}', overflow: TextOverflow.ellipsis)),
+                        Text(money(s.accBal(a), '${a['currency']}'), style: const TextStyle(fontWeight: FontWeight.w700)),
+                      ]),
+                    ),
+                ]),
+              ),
+              SectionTitle('Recent Transactions', action: 'See all', onAction: () => Navigator.of(context).push(pageRoute(const TransactionsScreen()))),
+              if (top.isEmpty)
+                const EmptyNote('No transactions yet. Tap + to add your first one.')
+              else
+                TxGroups(list: top, onOpen: (t) => showTxDetail(context, t)),
+              const SizedBox(height: 14),
+              OutlinedButton(
+                onPressed: () => Navigator.of(context).push(pageRoute(const TransactionsScreen())),
+                child: const Text('See All Transactions'),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+class _SyncChip extends StatelessWidget {
+  const _SyncChip({required this.text, required this.dirty});
+  final String text;
+  final bool dirty;
+  @override
+  Widget build(BuildContext context) {
+    if (text.isEmpty) return const SizedBox.shrink();
+    final p = Palette.of(context);
+    final c = dirty ? p.warn : p.pos;
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(color: c.withOpacity(.12), borderRadius: BorderRadius.circular(99)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(dirty ? Icons.cloud_upload_outlined : Icons.cloud_done_outlined, size: 15, color: c),
+          const SizedBox(width: 6),
+          Text(text, style: TextStyle(color: c, fontSize: 12, fontWeight: FontWeight.w600)),
+        ]),
+      ),
+    );
+  }
+}
+
+class _Mini extends StatelessWidget {
+  const _Mini({required this.label, required this.value, required this.color, required this.icon, required this.sub});
+  final String label, value, sub;
+  final Color color;
+  final IconData icon;
+  @override
+  Widget build(BuildContext context) {
+    final p = Palette.of(context);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: p.card2, borderRadius: BorderRadius.circular(18), border: Border.all(color: p.line)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(color: color.withOpacity(.16), shape: BoxShape.circle),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        const SizedBox(height: 10),
+        Text(label, style: TextStyle(color: p.muted, fontSize: 13)),
+        FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(value, style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.w800))),
+        const SizedBox(height: 4),
+        Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: p.muted, fontSize: 11.5)),
+      ]),
+    );
+  }
+}

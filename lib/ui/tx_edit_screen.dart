@@ -1,0 +1,222 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../core/currency.dart';
+import '../core/store.dart';
+import '../core/util.dart';
+import 'theme.dart';
+import 'widgets.dart';
+
+/// Add or edit a plain income / expense (same fields and saved shape as the web app).
+class TxEditScreen extends StatefulWidget {
+  const TxEditScreen({super.key, required this.type, this.existing});
+  final String type;
+  final J? existing;
+  @override
+  State<TxEditScreen> createState() => _TxEditScreenState();
+}
+
+class _TxEditScreenState extends State<TxEditScreen> {
+  late String type;
+  final amount = TextEditingController();
+  final note = TextEditingController();
+  String? catId, accId;
+  late String date;
+  late String time;
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.existing;
+    type = widget.type == 'income' ? 'income' : 'expense';
+    date = (e?['date'] ?? today()).toString();
+    time = (e?['time'] ?? nowTime()).toString();
+    if (e != null) {
+      final a = toD(e['amount']);
+      amount.text = a == a.roundToDouble() ? a.toStringAsFixed(0) : a.toString();
+      note.text = (e['note'] ?? '').toString();
+      catId = e['catId']?.toString();
+      accId = e['accId']?.toString();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    accId ??= StoreScope.read(context).defaultAccId;
+  }
+
+  @override
+  void dispose() {
+    amount.dispose();
+    note.dispose();
+    super.dispose();
+  }
+
+  void save() {
+    final s = StoreScope.read(context);
+    final v = double.tryParse(amount.text.replaceAll(',', '').trim()) ?? 0;
+    if (v <= 0) return toast(context, 'Enter an amount above zero');
+    if (catId == null) return toast(context, 'Choose a category');
+    if (accId == null) return toast(context, 'Choose an account');
+    final e = widget.existing;
+    final rec = <String, dynamic>{
+      'id': e?['id'] ?? uid(),
+      'type': type,
+      'kind': e?['kind'] ?? 'normal',
+      'catId': catId,
+      'accId': accId,
+      'amount': round2(v),
+      'date': date,
+      'time': time,
+      'note': note.text.trim(),
+      if (e == null) 'tags': <dynamic>[],
+      if (e == null) 'receipt': null,
+      if (e == null) 'planId': null,
+    };
+    HapticFeedback.lightImpact();
+    s.saveTx(rec);
+    Navigator.pop(context);
+    toast(context, 'Successfully saved transaction');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = StoreScope.of(context);
+    final p = Palette.of(context);
+    final inc = type == 'income';
+    final cur = s.accCur(accId);
+    final cats = s.categories.where((c) => c['kind'] == type).toList();
+    // most recently used first
+    final used = <String>[];
+    for (final t in s.txns.reversed) {
+      final id = t['catId']?.toString();
+      if (t['type'] == type && id != null && !used.contains(id)) used.add(id);
+      if (used.length >= 40) break;
+    }
+    cats.sort((a, b) {
+      final ia = used.indexOf('${a['id']}'), ib = used.indexOf('${b['id']}');
+      return (ia < 0 ? 999 : ia).compareTo(ib < 0 ? 999 : ib);
+    });
+    final head = inc ? p.pos : p.accent;
+    return Scaffold(
+      appBar: AppBar(title: Text('${widget.existing == null ? 'Add' : 'Edit'} ${inc ? 'Income' : 'Expense'}')),
+      body: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 40), children: [
+        if (widget.existing == null)
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'expense', label: Text('Expense'), icon: Icon(Icons.south_west_rounded)),
+              ButtonSegment(value: 'income', label: Text('Income'), icon: Icon(Icons.north_east_rounded)),
+            ],
+            selected: {type},
+            onSelectionChanged: (v) => setState(() {
+              type = v.first;
+              catId = null;
+            }),
+          ),
+        const SizedBox(height: 14),
+        GlassCard(
+          gradient: LinearGradient(colors: [Color.alphaBlend(head.withOpacity(.22), p.card), p.card]),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Amount', style: TextStyle(color: p.muted)),
+            Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+              Text(currencySymbol(cur), style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: p.muted)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextField(
+                  controller: amount,
+                  autofocus: widget.existing == null,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+                  style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w800),
+                  decoration: const InputDecoration(filled: false, border: InputBorder.none, enabledBorder: InputBorder.none, focusedBorder: InputBorder.none, hintText: '0.00', contentPadding: EdgeInsets.zero),
+                ),
+              ),
+            ]),
+          ]),
+        ),
+        const SectionTitle('Category'),
+        Wrap(spacing: 10, runSpacing: 10, children: [
+          for (final c in cats)
+            _CatChip(
+              icon: '${c['icon'] ?? '📦'}',
+              name: '${c['name']}',
+              on: catId == c['id'],
+              onTap: () {
+                HapticFeedback.selectionClick();
+                setState(() => catId = '${c['id']}');
+              },
+            ),
+        ]),
+        const SectionTitle('Account'),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          for (final a in s.accounts)
+            ChoiceChip(
+              label: Text('${a['name']} · ${a['currency']}'),
+              avatar: Icon(s.isCard(a) ? Icons.credit_card_rounded : Icons.account_balance_wallet_outlined, size: 18),
+              selected: accId == a['id'],
+              onSelected: (_) => setState(() => accId = '${a['id']}'),
+            ),
+        ]),
+        const SectionTitle('Date & time'),
+        Row(children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.calendar_today_rounded, size: 18),
+              label: Text(fmtDate(date)),
+              onPressed: () async {
+                final d = await showDatePicker(context: context, initialDate: parseDate(date), firstDate: DateTime(2000), lastDate: DateTime(2100));
+                if (d != null) setState(() => date = isoDate(d));
+              },
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.schedule_rounded, size: 18),
+              label: Text(fmtTime(time)),
+              onPressed: () async {
+                final parts = time.split(':');
+                final t = await showTimePicker(context: context, initialTime: TimeOfDay(hour: int.tryParse(parts[0]) ?? 9, minute: int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0));
+                if (t != null) setState(() => time = '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}:00');
+              },
+            ),
+          ),
+        ]),
+        const SectionTitle('Note'),
+        TextField(controller: note, maxLines: 3, minLines: 1, decoration: const InputDecoration(hintText: 'Add a note')),
+        const SizedBox(height: 22),
+        FilledButton(onPressed: save, child: const Text('Save')),
+      ]),
+    );
+  }
+}
+
+class _CatChip extends StatelessWidget {
+  const _CatChip({required this.icon, required this.name, required this.on, required this.onTap});
+  final String icon, name;
+  final bool on;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    final p = Palette.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 84,
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+        decoration: BoxDecoration(
+          color: on ? p.accent.withOpacity(.18) : p.card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: on ? p.accent : p.line, width: on ? 1.6 : 1),
+        ),
+        child: Column(children: [
+          Text(icon, style: const TextStyle(fontSize: 24)),
+          const SizedBox(height: 4),
+          Text(name, maxLines: 2, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, fontWeight: on ? FontWeight.w700 : FontWeight.w500)),
+        ]),
+      ),
+    );
+  }
+}
