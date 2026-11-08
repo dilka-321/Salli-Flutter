@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/currency.dart';
 import '../core/util.dart';
 import 'accounts_screen.dart';
+import 'due_soon.dart';
 import 'settings_screen.dart';
 import 'shell.dart';
 import 'theme.dart';
@@ -65,6 +66,7 @@ class HomeScreen extends StatelessWidget {
             sliver: SliverList.list(children: [
               _SyncChip(text: s.syncStatus, dirty: s.dirty),
               const SizedBox(height: 10),
+              const DueSoonCard(),
               // ---- Net cash flow (this month)
               GlassCard(
                 gradient: LinearGradient(

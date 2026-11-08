@@ -53,7 +53,7 @@ class _ShellState extends State<Shell> {
               },
             ),
             const SizedBox(height: 12),
-            Text('Subscriptions, recurring expenses, installments and plans are in the side menu (☰ on Home). Loans and lending come in the next round — use the Salli web app for those meanwhile.',
+            Text('Loans, lendings, subscriptions, recurring expenses, installments, plans and assets are in the side menu (☰ on Home).',
                 style: TextStyle(color: p.muted, fontSize: 12.5)),
           ]),
         ),

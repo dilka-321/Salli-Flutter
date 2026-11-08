@@ -10,7 +10,16 @@ This is the native rebuild of the Salli money manager. It signs in to **the same
 
 If a build turns red: open the failed step, copy the red error lines (or screenshot them) and send them to Claude to fix.
 
-## Round 4 (this version)
+## Round 5 (this version)
+- **Loans**: Unpaid / Paid tabs, All / Bank / Personal filter, OVERDUE badges. Add / edit (bank or personal, lender, currency — locked after payments, amount, interest, tenure, first instalment, **agreed exchange rates** per currency with ⇄ swap, optional "money received into" account). Loan page with remaining balance (and main-currency value at the agreed rate), % repaid, EMI, loan information, upcoming schedule with interest / principal, **Pay now** (red **PAY NOW - OVERDUE** when late) in any currency with bank fee, payment history with **Edit / Delete payment**, edit / delete loan (removes its transactions like the web app).
+- **Loan Analyzer**: EMI, total interest / payable, principal vs interest bar, EMI-to-income check, extra monthly payment savings, yearly breakdown.
+- **Lendings**: Outstanding / Received, new / edit lending (currency, paid-from account with conversion), lending page with totals, progress, information, **Receive Payment** in any currency, payment history (edit / delete), timeline, delete.
+- **My Assets & Fixed Deposits**: assets by type, add / edit / delete; FDs with currency, rate (yearly / monthly), term, monthly or at-maturity interest into an account — interest is posted automatically on each date (shared "posted" list with the web app, so nothing is added twice).
+- **Financial Overview**: net worth, health badge, assets / liabilities with change vs last month, balance sheet groups, assets-vs-liabilities ring, insights, copy summary.
+- **Due Soon** card on the Home screen (overdue or due within 7 days: loans, lendings, subscriptions, recurring, installments) — tap to open, ✕ to dismiss (shared with the web app).
+- Loan and lending transactions in any list now open their loan / lending.
+
+## Round 4
 - **Side menu** (☰ on the Home screen, or swipe from the left edge): profile header, SMS Automation card and the same sections as the web app — Finance, Planning, Loans & Assets, Productivity, Settings (and Administration for admins). Sections that are not rebuilt yet are marked "soon".
 - **Subscriptions, Recurring Expenses and Installments moved to the side menu**; the Budget tab now shows budgets only.
 - **Monthly Plan**: intro (with "Don't show this again"), plan list with on-track / over-plan progress, create / edit (name, month, income in any currency, Monthly Expenses by category, Loan Payments, Credit Card Payments, Saving Goals — each amount in any currency), remaining amount with hide/show, "Create Monthly Budgets?" for new plans, plan details with donut chart and per-category spending, Monthly Overview (planned vs actual), delete.
@@ -44,7 +53,6 @@ If a build turns red: open the failed step, copy the red error lines (or screens
 - Loan, lending and other linked entries are shown but are edited in the web app for now, so their links stay correct. Their main-currency values use each loan's agreed rate, like the web app.
 
 ## Next rounds (plan)
-5. Loans (agreed rates, overdue), loan analyzer, lending, assets / fixed deposits, financial overview, Due Soon.
 6. Goals, to-do, priority board, tags, account setup, customize dashboard, analytics, reports with PDF/Excel export, backup & restore, biometric lock, SMS, admin approvals, remaining settings.
 
 ## Safety of your data

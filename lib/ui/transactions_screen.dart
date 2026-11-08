@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/currency.dart';
+import '../core/loans.dart';
 import '../core/plans.dart';
 import '../core/store.dart';
 import '../core/util.dart';
 import '../core/ops.dart';
 import 'theme.dart';
 import 'installments_screens.dart';
+import 'lendings_screens.dart';
+import 'loans_screens.dart';
 import 'recurring_screens.dart';
 import 'subs_screens.dart';
 import 'transfers_screen.dart';
@@ -188,6 +191,23 @@ void showTxDetail(BuildContext context, J t) {
                 ),
               ),
             ])
+          else if (s.loanLinkOfTx(t) != null)
+            Builder(builder: (_) {
+              final o = s.loanLinkOfTx(t)!;
+              final label = o.kind == 'loan' ? 'loan' : 'lending';
+              return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Text('This entry belongs to a $label. Edit or delete it there so the balance stays linked.', style: TextStyle(color: p.muted, fontSize: 13)),
+                const SizedBox(height: 10),
+                FilledButton.icon(
+                  icon: const Icon(Icons.open_in_new_rounded),
+                  label: Text('Open $label'),
+                  onPressed: () {
+                    Navigator.pop(sheet);
+                    Navigator.of(context).push(pageRoute(o.kind == 'loan' ? LoanDetailScreen(id: o.id) : LendingDetailScreen(id: o.id)));
+                  },
+                ),
+              ]);
+            })
           else if (s.ownerOfTx(t) != null)
             Builder(builder: (_) {
               final o = s.ownerOfTx(t)!;

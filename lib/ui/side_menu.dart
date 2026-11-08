@@ -6,12 +6,16 @@ import '../core/currency.dart';
 import '../core/ops.dart';
 import '../core/store.dart';
 import 'accounts_screen.dart';
+import 'assets_screens.dart';
 import 'card_screen.dart';
 import 'categories_screen.dart';
 import 'coming_soon.dart';
 import 'installments_screens.dart';
+import 'lendings_screens.dart';
+import 'loans_screens.dart';
 import 'monthly_plan_screens.dart';
 import 'ot_screens.dart';
+import 'overview_screen.dart';
 import 'recurring_screens.dart';
 import 'settings_screen.dart';
 import 'spending_plan_screens.dart';
@@ -116,7 +120,7 @@ class SideMenu extends StatelessWidget {
         ),
         sec('FINANCE', p.pos),
         item('My Accounts', Icons.account_balance_wallet_outlined, p.pos, () => const AccountsScreen()),
-        item('Financial Overview', Icons.trending_up_rounded, blue, () => soon('Financial Overview', Icons.trending_up_rounded, 'round 5'), later: true),
+        item('Financial Overview', Icons.trending_up_rounded, blue, () => const OverviewScreen()),
         item('Credit Cards', Icons.credit_card_rounded, purple, () => const CardsListScreen()),
         item('Transfers', Icons.swap_horiz_rounded, orange, () => const TransfersScreen()),
         item('SMS Drafts', Icons.sms_outlined, p.pos, () => soon('SMS Drafts', Icons.sms_outlined, 'a later round'), later: true),
@@ -128,10 +132,10 @@ class SideMenu extends StatelessWidget {
         item('Subscriptions', Icons.subscriptions_outlined, orange, () => const SubsScreen()),
         item('Recurring Expenses', Icons.repeat_rounded, orange, () => const RecurringScreen()),
         sec('LOANS & ASSETS', red),
-        item('Loans', Icons.account_balance_rounded, red, () => soon('Loans', Icons.account_balance_rounded, 'round 5'), later: true),
-        item('Loan Analyzer', Icons.query_stats_rounded, red, () => soon('Loan Analyzer', Icons.query_stats_rounded, 'round 5'), later: true),
-        item('Lendings', Icons.back_hand_outlined, orange, () => soon('Lendings', Icons.back_hand_outlined, 'round 5'), later: true),
-        item('My Assets', Icons.work_outline_rounded, p.pos, () => soon('My Assets', Icons.work_outline_rounded, 'round 5'), later: true),
+        item('Loans', Icons.account_balance_rounded, red, () => const LoansScreen()),
+        item('Loan Analyzer', Icons.query_stats_rounded, red, () => const LoanAnalyzerScreen()),
+        item('Lendings', Icons.back_hand_outlined, orange, () => const LendingsScreen()),
+        item('My Assets', Icons.work_outline_rounded, p.pos, () => const AssetsScreen()),
         item('Installments', Icons.receipt_long_rounded, blue, () => const InstallmentsScreen()),
         sec('PRODUCTIVITY', blue),
         item('Goals', Icons.savings_outlined, p.pos, () => soon('Goals', Icons.savings_outlined, 'round 6'), later: true),
