@@ -12,6 +12,8 @@ import '../core/round6.dart';
 import '../core/store.dart';
 import '../core/util.dart';
 import 'analytics_screen.dart';
+import 'files.dart';
+import '../core/export.dart';
 import 'home_widgets.dart';
 import 'plans_common.dart';
 import 'theme.dart';
@@ -190,6 +192,47 @@ class ReportPreviewScreen extends StatelessWidget {
       s.settings['exportCfg'] = <String, dynamic>{'overview': true, 'charts': true, 'insights': true, 'txlist': true, 'income': true, 'behavior': true, 'top': true, 'budget': true, 'predict': false, 'bank': false, 'bankAccs': <dynamic>[]};
     }
     return s.settings['exportCfg'] as J;
+  }
+
+  void _export(BuildContext context) {
+    final s = StoreScope.read(context);
+    final name = 'Salli_Report_${from}_to_$to';
+    showModalBottomSheet(
+      context: context,
+      builder: (c) {
+        final p = Palette.of(c);
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              const Text('Share report', textAlign: TextAlign.center, style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
+              Text('Choose the file type', textAlign: TextAlign.center, style: TextStyle(color: p.muted)),
+              const SizedBox(height: 10),
+              ListTile(
+                leading: CircleAvatar(backgroundColor: p.neg.withOpacity(.14), child: Icon(Icons.picture_as_pdf_rounded, color: p.neg)),
+                title: const Text('PDF document', style: TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: const Text('The full report, ready to print or send'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () {
+                  Navigator.pop(c);
+                  deliverFileSheet(context, title: 'PDF report', subtitle: '${fmtDate(from)} - ${fmtDate(to)}', build: () => buildReportPdf(s, from, to), name: '$name.pdf', mime: 'application/pdf', subject: 'Salli financial report');
+                },
+              ),
+              ListTile(
+                leading: CircleAvatar(backgroundColor: p.pos.withOpacity(.14), child: Icon(Icons.table_chart_rounded, color: p.pos)),
+                title: const Text('Excel workbook', style: TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: const Text('Summary, categories, transactions and bank statements'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () {
+                  Navigator.pop(c);
+                  deliverFileSheet(context, title: 'Excel report', subtitle: '${fmtDate(from)} - ${fmtDate(to)}', build: () async => buildReportXlsx(s, from, to), name: '$name.xlsx', mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', subject: 'Salli financial report');
+                },
+              ),
+            ]),
+          ),
+        );
+      },
+    );
   }
 
   void _settings(BuildContext context) {
@@ -549,6 +592,7 @@ class ReportPreviewScreen extends StatelessWidget {
           },
         ),
         IconButton(tooltip: 'Export settings', icon: const Icon(Icons.tune_rounded), onPressed: () => _settings(context)),
+        IconButton(tooltip: 'Download or share', icon: const Icon(Icons.ios_share_rounded), onPressed: () => _export(context)),
       ]),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 40), children: pages),
     );

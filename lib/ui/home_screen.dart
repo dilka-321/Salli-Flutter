@@ -6,6 +6,7 @@ import 'accounts_screen.dart';
 import 'due_soon.dart';
 import 'home_widgets.dart';
 import '../core/round6.dart';
+import '../core/round7.dart';
 import 'settings_screen.dart';
 import 'shell.dart';
 import 'theme.dart';
@@ -50,6 +51,14 @@ class HomeScreen extends StatelessWidget {
               Text('Welcome to Salli', style: TextStyle(fontSize: 13.5, color: p.muted, fontWeight: FontWeight.w400)),
             ]),
             actions: [
+              Builder(builder: (_) {
+                final n = s.notifications().length;
+                return IconButton(
+                  tooltip: 'Notifications',
+                  onPressed: () => Navigator.of(context).push(pageRoute(const NotificationsScreen())),
+                  icon: Badge(isLabelVisible: n > 0, label: Text('$n'), child: const Icon(Icons.notifications_none_rounded, size: 27)),
+                );
+              }),
               Padding(
                 padding: const EdgeInsets.only(right: 14),
                 child: GestureDetector(

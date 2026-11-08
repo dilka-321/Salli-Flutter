@@ -29,6 +29,15 @@ class AppStore extends ChangeNotifier with WidgetsBindingObserver {
   String? message; // shown on the auth screens
   User? user;
   J? profile;
+
+  // ---- app lock (PIN / biometric): locked again after a minute in the background
+  bool unlocked = false;
+  DateTime? _bgAt;
+  bool get needsUnlock => phase == Phase.ready && data['settings'] is Map && '${(data['settings'] as Map)['pin'] ?? ''}'.isNotEmpty && !unlocked;
+  void unlock() {
+    unlocked = true;
+    notifyListeners();
+  }
   J data = {};
   J? conflictRemote;
 
@@ -64,6 +73,15 @@ class AppStore extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) _bgAt ??= DateTime.now();
+    if (state == AppLifecycleState.resumed) {
+      final away = _bgAt == null ? Duration.zero : DateTime.now().difference(_bgAt!);
+      _bgAt = null;
+      if (away.inSeconds >= 60 && unlocked) {
+        unlocked = false;
+        notifyListeners();
+      }
+    }
     if (state == AppLifecycleState.resumed && phase == Phase.ready) {
       if (dirty) {
         syncNow();
@@ -206,7 +224,7 @@ class AppStore extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Fill in lists/settings this app reads, without touching anything else.
   void ensureShape() {
-    for (final k in ['accounts', 'txns', 'categories', 'rates', 'loans', 'lendings', 'subs', 'recurring', 'installments', 'goals', 'budgets', 'plans', 'splans', 'assets', 'assetTypes', 'todos', 'priorities', 'tags', 'reports']) {
+    for (final k in ['accounts', 'txns', 'categories', 'rates', 'loans', 'lendings', 'subs', 'recurring', 'installments', 'goals', 'budgets', 'plans', 'splans', 'assets', 'assetTypes', 'todos', 'priorities', 'tags', 'reports', 'smsDrafts']) {
       if (data[k] is! List) data[k] = [];
     }
     if (data['settings'] is! Map) data['settings'] = <String, dynamic>{};
@@ -367,6 +385,7 @@ class AppStore extends ChangeNotifier with WidgetsBindingObserver {
     } catch (_) {}
     user = null;
     data = {};
+    unlocked = false;
     phase = Phase.signedOut;
     notifyListeners();
   }

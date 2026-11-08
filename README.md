@@ -10,7 +10,19 @@ This is the native rebuild of the Salli money manager. It signs in to **the same
 
 If a build turns red: open the failed step, copy the red error lines (or screenshot them) and send them to Claude to fix.
 
-## Round 6 (this version)
+## Round 7 (this version — all sections now native)
+- **Reports → Share**: download or share the report as a **PDF** or an **Excel (.xlsx)** file (Save to phone or Share to Gmail / Drive / WhatsApp). Bank statements are included when switched on in Export settings.
+- **Backup & Restore**: Backup Now (save to phone or share), Restore Data from a backup file (same file format as the web app — backups move between both apps), Export all transactions to Excel, **Automatic backup** (daily / weekly / monthly copy kept on the phone) and **Also send to Gmail** (when due, Salli opens the share menu with the backup attached).
+- **App Lock**: 4-digit PIN (the same PIN works in the web app) and **Biometric Unlock** (fingerprint / face). Locks again after a minute in the background. "Forgot PIN?" turns the lock off after you enter your account password.
+- **Settings**: profile (saved to your account), Light / Dark / System, **accent colour**, **font size**, **Currency Settings** (functional currency, my currencies), **Exchange Rates** (manual rates, reference rates, update from the internet), **Notification Settings**, cloud sync, sign out, Erase Data.
+- **Notifications** bell on Home: bills & due dates, budget alerts, subscriptions, installments, loans, cards, lendings, to-dos, recurring and SMS drafts.
+- **SMS Automation / SMS Parser / SMS Drafts**: paste bank messages; OTPs and promotions are skipped, account numbers masked; review each draft or Save all.
+- **Admin approvals** (admins only): approve, reject or suspend registrations.
+- Not included: the language switch (the native app is English for now).
+
+**Build file update (needed once for fingerprint unlock):** replace the content of `.github/workflows/build-apk.yml` on GitHub with the new `build-apk.yml` (adds the fingerprint permission). Without it the app still builds and the PIN lock works; only fingerprint unlock is unavailable.
+
+## Round 6
 - **Analytics tab**: General (10 spending highlights, daily income / expense bars, spending by account, category donut with drill-down), Expense Category and Income Category grids, last-12-month chips and a custom date range.
 - **Reports tab**: History of generated reports and the generator (This Month, Last Month, Last 3 / 6 / 12 Months, custom range). Report preview with the web report's sections: summary, Financial Health Score with breakdown and recommendations, Net Worth Statement, Cash Flow, Spending Analysis (category bar, day-of-week, transaction sizes), Budget Performance, Debt & Liabilities, Expense Prediction, Behavioral Insights, Top Transactions, Transaction List and Bank Statements — toggled in Export settings (shared with the web app). Copy summary to share. *(PDF / Excel files come in round 7.)*
 - **Customize Dashboard**: drag to reorder and switch Home widgets on / off (Due Soon, Balance Overview, My Accounts, Fixed Deposits, Recent Transactions, Spending Trend, Budget Progress, Upcoming Subscriptions, Installment Overview, Loan Overview, Expense Summary, Standing Orders) — same layout setting as the web app.
@@ -61,8 +73,8 @@ If a build turns red: open the failed step, copy the red error lines (or screens
 - Light / Dark (true black) / System appearance, your accent colour from the web app, smooth page transitions and haptic feedback.
 - Loan, lending and other linked entries are shown but are edited in the web app for now, so their links stay correct. Their main-currency values use each loan's agreed rate, like the web app.
 
-## Next rounds (plan)
-7. PDF / Excel report export & share, backup & restore (file + auto backup), PIN / biometric lock, SMS automation / drafts / parser, admin approvals, remaining settings (currency, exchange rates, notifications).
+## Next
+Every section of the web app now has a native screen. Report anything missing or different and it will be corrected.
 
 ## Safety of your data
 The app keeps your cloud data exactly as the web app saved it and only changes the parts it knows about. Every upload sends the whole document back, so nothing the web app stores is lost.

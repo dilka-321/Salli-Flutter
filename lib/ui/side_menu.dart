@@ -9,7 +9,6 @@ import 'accounts_screen.dart';
 import 'assets_screens.dart';
 import 'card_screen.dart';
 import 'categories_screen.dart';
-import 'coming_soon.dart';
 import 'goals_screens.dart';
 import 'installments_screens.dart';
 import 'lendings_screens.dart';
@@ -20,6 +19,7 @@ import 'overview_screen.dart';
 import 'productivity_screens.dart';
 import 'recurring_screens.dart';
 import 'settings_screen.dart';
+import 'sms_admin_screens.dart';
 import 'spending_plan_screens.dart';
 import 'subs_screens.dart';
 import 'theme.dart';
@@ -45,7 +45,6 @@ class SideMenu extends StatelessWidget {
       Navigator.of(context).push(pageRoute(page));
     }
 
-    Widget soon(String title, IconData icon, String round) => ComingSoon(title: title, icon: icon, round: round, showBack: true);
 
     Widget item(String label, IconData icon, Color c, Widget Function() page, {bool later = false}) => ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 18),
@@ -105,7 +104,7 @@ class SideMenu extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
           child: GlassCard(
             padding: const EdgeInsets.all(14),
-            onTap: () => go(soon('SMS Automation', Icons.auto_awesome_rounded, 'round 7')),
+            onTap: () => go(const SmsSetupScreen()),
             gradient: LinearGradient(colors: [Color.alphaBlend(purple.withOpacity(.16), p.card), p.card]),
             child: Row(children: [
               Container(width: 46, height: 46, decoration: BoxDecoration(color: purple.withOpacity(.18), borderRadius: BorderRadius.circular(14)), child: Icon(Icons.auto_awesome_rounded, color: purple)),
@@ -125,8 +124,8 @@ class SideMenu extends StatelessWidget {
         item('Financial Overview', Icons.trending_up_rounded, blue, () => const OverviewScreen()),
         item('Credit Cards', Icons.credit_card_rounded, purple, () => const CardsListScreen()),
         item('Transfers', Icons.swap_horiz_rounded, orange, () => const TransfersScreen()),
-        item('SMS Drafts', Icons.sms_outlined, p.pos, () => soon('SMS Drafts', Icons.sms_outlined, 'round 7'), later: true),
-        item('SMS Parser', Icons.document_scanner_outlined, blue, () => soon('SMS Parser', Icons.document_scanner_outlined, 'round 7'), later: true),
+        item('SMS Drafts', Icons.sms_outlined, p.pos, () => const SmsDraftsScreen()),
+        item('SMS Parser', Icons.document_scanner_outlined, blue, () => const SmsParserScreen()),
         sec('PLANNING', orange),
         item('Monthly Plan', Icons.calendar_view_month_rounded, p.pos, () => const MonthlyPlansScreen()),
         item('Spending Plan', Icons.event_note_rounded, blue, () => const SpendingPlansScreen()),
@@ -148,11 +147,11 @@ class SideMenu extends StatelessWidget {
         item('Tags', Icons.sell_outlined, purple, () => const TagsScreen()),
         item('Account Setup', Icons.home_outlined, blue, () => const AccountSetupScreen()),
         item('Customize Dashboard', Icons.dashboard_customize_outlined, p.pos, () => const DashboardSetupScreen()),
-        item('Backup & Restore', Icons.cloud_upload_outlined, p.pos, () => soon('Backup & Restore', Icons.cloud_upload_outlined, 'round 7'), later: true),
+        item('Backup & Restore', Icons.cloud_upload_outlined, p.pos, () => const BackupScreen()),
         item('Settings', Icons.settings_outlined, blue, () => const SettingsScreen()),
         if (s.profile?['role'] == 'admin') ...[
           sec('ADMINISTRATION', p.pos),
-          item('Admin approvals', Icons.person_outline_rounded, blue, () => soon('Admin approvals', Icons.person_outline_rounded, 'round 7 (use the web app meanwhile)'), later: true),
+          item('Admin approvals', Icons.person_outline_rounded, blue, () => const AdminScreen()),
         ],
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 22, 16, 30),

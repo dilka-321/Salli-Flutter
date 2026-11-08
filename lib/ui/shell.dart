@@ -4,6 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'budget_screens.dart';
+import 'card_screen.dart';
+import 'due_soon.dart';
+import 'productivity_screens.dart';
+import 'settings_screen.dart';
+import 'sms_admin_screens.dart';
+import '../core/round7.dart';
 import 'analytics_screen.dart';
 import 'reports_screen.dart';
 import 'home_screen.dart';
@@ -26,6 +32,27 @@ class Shell extends StatefulWidget {
 
 class _ShellState extends State<Shell> {
   int tab = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    openNotice = (ctx, n) {
+      final Widget? page = switch (n.scr) {
+        'budget' => BudgetViewScreen(id: n.id),
+        'card' => CardScreen(id: n.id),
+        'todos' => const TodosScreen(),
+        'sms' => const SmsDraftsScreen(),
+        _ => pageForDue(n.scr, n.id),
+      };
+      if (page != null) Navigator.of(ctx).push(pageRoute(page));
+    };
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final s = StoreScope.read(context);
+      s.refreshLiveRates();
+      await runAutoBackup(context);
+    });
+  }
 
   void _quickAdd() {
     HapticFeedback.mediumImpact();

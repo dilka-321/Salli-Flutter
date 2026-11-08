@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config.dart';
 import 'core/store.dart';
 import 'ui/auth_screens.dart';
+import 'ui/lock_screen.dart';
 import 'ui/shell.dart';
 import 'ui/theme.dart';
 import 'ui/widgets.dart';
@@ -48,7 +49,10 @@ class SalliApp extends StatelessWidget {
                 statusBarColor: Colors.transparent,
                 systemNavigationBarColor: Colors.transparent,
               ),
-              child: child ?? const SizedBox.shrink(),
+              child: MediaQuery(
+                data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(MediaQuery.of(context).textScaler.scale(14) / 14 * _fontScale(set))),
+                child: child ?? const SizedBox.shrink(),
+              ),
             );
           },
           home: const _Root(),
@@ -78,13 +82,13 @@ class _Root extends StatelessWidget {
       case Phase.conflict:
         page = const ConflictScreen();
       case Phase.ready:
-        page = const Shell();
+        page = s.needsUnlock ? const LockScreen() : const Shell();
     }
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 450),
       switchInCurve: Curves.easeOutCubic,
       transitionBuilder: (c, a) => FadeTransition(opacity: a, child: c),
-      child: KeyedSubtree(key: ValueKey(s.phase), child: page),
+      child: KeyedSubtree(key: ValueKey('${s.phase}${s.needsUnlock}'), child: page),
     );
   }
 }
@@ -109,4 +113,10 @@ class _Splash extends StatelessWidget {
       ),
     );
   }
+}
+
+double _fontScale(dynamic set) {
+  final f = set is Map ? set['font'] : null;
+  final v = f is Map ? double.tryParse('${f['scale']}') : null;
+  return v == null || v <= 0 ? 1.0 : v.clamp(.8, 1.4).toDouble();
 }

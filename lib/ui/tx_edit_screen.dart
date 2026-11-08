@@ -13,13 +13,16 @@ import 'widgets.dart';
 
 /// Add or edit a plain income / expense (same fields and saved shape as the web app).
 class TxEditScreen extends StatefulWidget {
-  const TxEditScreen({super.key, required this.type, this.existing, this.planId, this.presetCatId, this.presetDate});
+  const TxEditScreen({super.key, required this.type, this.existing, this.planId, this.presetCatId, this.presetDate, this.draft});
   final String type;
   final J? existing;
 
   /// spending plan to link a new expense to (from a spending plan's "Add Transaction")
   final String? planId;
   final String? presetCatId;
+
+  /// prefilled values for a new transaction (e.g. from an SMS draft)
+  final J? draft;
   final String? presetDate;
   @override
   State<TxEditScreen> createState() => _TxEditScreenState();
@@ -44,6 +47,15 @@ class _TxEditScreenState extends State<TxEditScreen> {
     catId = widget.presetCatId;
     tags = ((e?['tags'] as List?) ?? const []).map((x) => '$x').toList();
     time = (e?['time'] ?? nowTime()).toString();
+    final d = widget.draft;
+    if (e == null && d != null) {
+      final a = toD(d['amount']);
+      if (a > 0) amount.text = a == a.roundToDouble() ? a.toStringAsFixed(0) : a.toString();
+      note.text = (d['note'] ?? '').toString();
+      catId = d['catId']?.toString();
+      accId = d['accId']?.toString();
+      date = (d['date'] ?? date).toString();
+    }
     if (e != null) {
       final a = toD(e['amount']);
       amount.text = a == a.roundToDouble() ? a.toStringAsFixed(0) : a.toString();
