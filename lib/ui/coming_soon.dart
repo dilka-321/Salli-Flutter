@@ -4,7 +4,8 @@ import 'theme.dart';
 import 'widgets.dart';
 
 class ComingSoon extends StatelessWidget {
-  const ComingSoon({super.key, required this.title, required this.icon, required this.round});
+  const ComingSoon({super.key, required this.title, required this.icon, required this.round, this.showBack = false});
+  final bool showBack;
   final String title;
   final IconData icon;
   final String round;
@@ -12,7 +13,7 @@ class ComingSoon extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = Palette.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(title), automaticallyImplyLeading: false),
+      appBar: AppBar(title: Text(title), automaticallyImplyLeading: showBack),
       body: ListView(padding: const EdgeInsets.fromLTRB(18, 8, 18, 120), children: [
         GlassCard(
           child: Column(children: [

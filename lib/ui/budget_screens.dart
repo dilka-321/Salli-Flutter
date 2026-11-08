@@ -5,10 +5,7 @@ import '../core/plans.dart';
 import '../core/store.dart';
 import '../core/util.dart';
 import 'categories_screen.dart';
-import 'installments_screens.dart';
 import 'plans_common.dart';
-import 'recurring_screens.dart';
-import 'subs_screens.dart';
 import 'theme.dart';
 import 'transactions_screen.dart';
 import 'transfers_screen.dart';
@@ -24,9 +21,6 @@ class BudgetTab extends StatelessWidget {
     final L = s.budgets;
     final tot = L.fold(0.0, (a, b) => a + toD(b['amount']));
     final sp = L.fold(0.0, (a, b) => a + s.budgetSpent(b));
-    final subsDue = s.subs.where((x) => x['active'] != false && '${x['next']}'.compareTo(today()) < 0).length;
-    final recDue = s.recurring.fold(0, (a, r) => a + s.recMissed(r));
-    final instOpen = s.installments.where((x) => s.instStatus(x).$1 != 'Completed').length;
     return Scaffold(
       body: CustomScrollView(slivers: [
         SliverAppBar.large(
@@ -38,21 +32,13 @@ class BudgetTab extends StatelessWidget {
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
           sliver: SliverList.list(children: [
-            Row(children: [
-              Expanded(child: _Shortcut(icon: Icons.subscriptions_outlined, label: 'Subscriptions', badge: subsDue, color: p.neg, onTap: () => Navigator.of(context).push(pageRoute(const SubsScreen())))),
-              const SizedBox(width: 10),
-              Expanded(child: _Shortcut(icon: Icons.repeat_rounded, label: 'Recurring', badge: recDue, color: p.warn, onTap: () => Navigator.of(context).push(pageRoute(const RecurringScreen())))),
-              const SizedBox(width: 10),
-              Expanded(child: _Shortcut(icon: Icons.receipt_long_rounded, label: 'Installments', badge: instOpen, badgeIsInfo: true, color: p.accent, onTap: () => Navigator.of(context).push(pageRoute(const InstallmentsScreen())))),
-            ]),
             if (L.isEmpty) ...[
-              const SizedBox(height: 30),
+              const SizedBox(height: 10),
               const EmptyNote('No budgets yet\nSet daily, weekly, monthly, quarterly or yearly limits for your categories', icon: Icons.savings_outlined),
               Center(
                 child: FilledButton.icon(icon: const Icon(Icons.add_rounded), label: const Text('Create Budget'), onPressed: () => Navigator.of(context).push(pageRoute(const BudgetEditScreen()))),
               ),
             ] else ...[
-              const SizedBox(height: 16),
               GlassCard(
                 gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color.alphaBlend(p.accent.withOpacity(.22), p.card), p.card]),
                 child: Row(children: [
@@ -85,41 +71,6 @@ class BudgetTab extends StatelessWidget {
             ],
           ]),
         ),
-      ]),
-    );
-  }
-}
-
-class _Shortcut extends StatelessWidget {
-  const _Shortcut({required this.icon, required this.label, required this.color, required this.onTap, this.badge = 0, this.badgeIsInfo = false});
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-  final int badge;
-  final bool badgeIsInfo;
-  @override
-  Widget build(BuildContext context) {
-    final p = Palette.of(context);
-    return GlassCard(
-      onTap: onTap,
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 6),
-      child: Column(children: [
-        Stack(clipBehavior: Clip.none, children: [
-          Container(width: 46, height: 46, decoration: BoxDecoration(color: color.withOpacity(.15), shape: BoxShape.circle), child: Icon(icon, color: color)),
-          if (badge > 0)
-            Positioned(
-              right: -6,
-              top: -4,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(color: badgeIsInfo ? p.accent : p.neg, borderRadius: BorderRadius.circular(99)),
-                child: Text('$badge', style: TextStyle(color: badgeIsInfo ? p.accentInk : Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
-              ),
-            ),
-        ]),
-        const SizedBox(height: 8),
-        Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5)),
       ]),
     );
   }

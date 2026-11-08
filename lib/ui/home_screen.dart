@@ -4,6 +4,7 @@ import '../core/currency.dart';
 import '../core/util.dart';
 import 'accounts_screen.dart';
 import 'settings_screen.dart';
+import 'shell.dart';
 import 'theme.dart';
 import 'transactions_screen.dart';
 import 'widgets.dart';
@@ -38,6 +39,9 @@ class HomeScreen extends StatelessWidget {
             pinned: true,
             toolbarHeight: 72,
             backgroundColor: p.bg.withOpacity(.92),
+            automaticallyImplyLeading: false,
+            leading: IconButton(tooltip: 'Menu', icon: const Icon(Icons.menu_rounded, size: 28), onPressed: Shell.openMenu),
+            titleSpacing: 0,
             title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('Hi, $first', style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
               Text('Welcome to Salli', style: TextStyle(fontSize: 13.5, color: p.muted, fontWeight: FontWeight.w400)),

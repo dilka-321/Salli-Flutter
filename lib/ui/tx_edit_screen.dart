@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/currency.dart';
+import '../core/planning.dart';
 import '../core/store.dart';
 import '../core/util.dart';
 import 'categories_screen.dart';
@@ -10,9 +11,14 @@ import 'widgets.dart';
 
 /// Add or edit a plain income / expense (same fields and saved shape as the web app).
 class TxEditScreen extends StatefulWidget {
-  const TxEditScreen({super.key, required this.type, this.existing});
+  const TxEditScreen({super.key, required this.type, this.existing, this.planId, this.presetCatId, this.presetDate});
   final String type;
   final J? existing;
+
+  /// spending plan to link a new expense to (from a spending plan's "Add Transaction")
+  final String? planId;
+  final String? presetCatId;
+  final String? presetDate;
   @override
   State<TxEditScreen> createState() => _TxEditScreenState();
 }
@@ -21,7 +27,7 @@ class _TxEditScreenState extends State<TxEditScreen> {
   late String type;
   final amount = TextEditingController();
   final note = TextEditingController();
-  String? catId, accId;
+  String? catId, accId, planId;
   late String date;
   late String time;
 
@@ -30,7 +36,9 @@ class _TxEditScreenState extends State<TxEditScreen> {
     super.initState();
     final e = widget.existing;
     type = widget.type == 'income' ? 'income' : 'expense';
-    date = (e?['date'] ?? today()).toString();
+    date = (e?['date'] ?? widget.presetDate ?? today()).toString();
+    planId = e != null ? e['planId']?.toString() : widget.planId;
+    catId = widget.presetCatId;
     time = (e?['time'] ?? nowTime()).toString();
     if (e != null) {
       final a = toD(e['amount']);
@@ -73,7 +81,7 @@ class _TxEditScreenState extends State<TxEditScreen> {
       'note': note.text.trim(),
       if (e == null) 'tags': <dynamic>[],
       if (e == null) 'receipt': null,
-      if (e == null) 'planId': null,
+      'planId': type == 'expense' ? planId : null,
     };
     HapticFeedback.lightImpact();
     s.saveTx(rec);
@@ -185,6 +193,27 @@ class _TxEditScreenState extends State<TxEditScreen> {
             ),
           ),
         ]),
+        if (type == 'expense' && s.splans.isNotEmpty) ...[
+          const SectionTitle('Spending plan'),
+          GlassCard(
+            padding: const EdgeInsets.fromLTRB(16, 10, 6, 10),
+            onTap: () async {
+              final x = await _pickPlan(context, planId);
+              if (x != null) setState(() => planId = x.isEmpty ? null : x);
+            },
+            child: Row(children: [
+              Icon(Icons.calendar_month_rounded, color: p.pos),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('SPENDING PLAN', style: TextStyle(color: p.pos, fontSize: 11, fontWeight: FontWeight.w800)),
+                  Text(s.splan(planId ?? '')?['name']?.toString() ?? 'Select a spending plan', style: TextStyle(fontWeight: planId != null ? FontWeight.w700 : FontWeight.w400, color: planId != null ? null : p.muted)),
+                ]),
+              ),
+              if (planId != null) IconButton(onPressed: () => setState(() => planId = null), icon: Icon(Icons.close_rounded, color: p.neg)) else Icon(Icons.chevron_right_rounded, color: p.muted),
+            ]),
+          ),
+        ],
         const SectionTitle('Note'),
         TextField(controller: note, maxLines: 3, minLines: 1, decoration: const InputDecoration(hintText: 'Add a note')),
         const SizedBox(height: 22),
@@ -221,4 +250,30 @@ class _CatChip extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Spending plan picker (active plans first) — returns the id, '' for none, or null when cancelled.
+Future<String?> _pickPlan(BuildContext context, String? current) {
+  final s = StoreScope.read(context);
+  final L = [...s.splans]..sort((a, b) {
+      final x = (s.splanActive(b) ? 1 : 0) - (s.splanActive(a) ? 1 : 0);
+      return x != 0 ? x : '${b['start']}'.compareTo('${a['start']}');
+    });
+  return showModalBottomSheet<String>(
+    context: context,
+    builder: (c) => SafeArea(
+      child: ListView(shrinkWrap: true, padding: const EdgeInsets.only(bottom: 12), children: [
+        const Padding(padding: EdgeInsets.fromLTRB(20, 0, 20, 8), child: Text('Select a spending plan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800))),
+        ListTile(leading: const Icon(Icons.block_rounded), title: const Text('None'), onTap: () => Navigator.pop(c, '')),
+        for (final pl in L)
+          ListTile(
+            leading: const Icon(Icons.calendar_month_rounded),
+            title: Text('${pl['name']}'),
+            subtitle: Text(s.splanActive(pl) ? 'Active' : fmtDate('${pl['start']}')),
+            trailing: current == pl['id'] ? const Icon(Icons.check_circle_rounded) : null,
+            onTap: () => Navigator.pop(c, '${pl['id']}'),
+          ),
+      ]),
+    ),
+  );
 }

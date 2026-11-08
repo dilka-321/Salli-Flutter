@@ -206,7 +206,7 @@ class AppStore extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Fill in lists/settings this app reads, without touching anything else.
   void ensureShape() {
-    for (final k in ['accounts', 'txns', 'categories', 'rates', 'loans', 'lendings', 'subs', 'recurring', 'installments', 'goals', 'budgets']) {
+    for (final k in ['accounts', 'txns', 'categories', 'rates', 'loans', 'lendings', 'subs', 'recurring', 'installments', 'goals', 'budgets', 'plans', 'splans']) {
       if (data[k] is! List) data[k] = [];
     }
     if (data['settings'] is! Map) data['settings'] = <String, dynamic>{};

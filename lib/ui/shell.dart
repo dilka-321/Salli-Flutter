@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'budget_screens.dart';
 import 'coming_soon.dart';
 import 'home_screen.dart';
+import 'side_menu.dart';
 import 'theme.dart';
 import 'transfers_screen.dart';
 import 'tx_edit_screen.dart';
@@ -14,6 +15,10 @@ import 'widgets.dart';
 /// Bottom bar: Home · Budget · (+) · Analytics · Reports — same layout as the web app.
 class Shell extends StatefulWidget {
   const Shell({super.key});
+
+  /// Lets any tab open the side menu.
+  static final scaffoldKey = GlobalKey<ScaffoldState>();
+  static void openMenu() => scaffoldKey.currentState?.openDrawer();
   @override
   State<Shell> createState() => _ShellState();
 }
@@ -48,7 +53,7 @@ class _ShellState extends State<Shell> {
               },
             ),
             const SizedBox(height: 12),
-            Text('Subscriptions, recurring expenses and installments are in the Budget tab. Loans and lending come in the next round — use the Salli web app for those meanwhile.',
+            Text('Subscriptions, recurring expenses, installments and plans are in the side menu (☰ on Home). Loans and lending come in the next round — use the Salli web app for those meanwhile.',
                 style: TextStyle(color: p.muted, fontSize: 12.5)),
           ]),
         ),
@@ -71,6 +76,9 @@ class _ShellState extends State<Shell> {
       const ComingSoon(title: 'Reports', icon: Icons.description_outlined, round: 'Round 4'),
     ];
     return Scaffold(
+      key: Shell.scaffoldKey,
+      drawer: const SideMenu(),
+      drawerEdgeDragWidth: tab == 0 ? 28 : 0,
       extendBody: true,
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 320),
