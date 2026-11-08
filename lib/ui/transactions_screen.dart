@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/currency.dart';
+import '../core/plans.dart';
 import '../core/store.dart';
 import '../core/util.dart';
 import '../core/ops.dart';
 import 'theme.dart';
+import 'installments_screens.dart';
+import 'recurring_screens.dart';
+import 'subs_screens.dart';
 import 'transfers_screen.dart';
 import 'tx_edit_screen.dart';
 import 'widgets.dart';
@@ -184,6 +188,28 @@ void showTxDetail(BuildContext context, J t) {
                 ),
               ),
             ])
+          else if (s.ownerOfTx(t) != null)
+            Builder(builder: (_) {
+              final o = s.ownerOfTx(t)!;
+              final label = o.kind == 'sub' ? 'subscription' : o.kind == 'rec' ? 'recurring expense' : 'installment plan';
+              return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Text('This payment belongs to a $label. Edit or delete it there so everything stays linked.', style: TextStyle(color: p.muted, fontSize: 13)),
+                const SizedBox(height: 10),
+                FilledButton.icon(
+                  icon: const Icon(Icons.open_in_new_rounded),
+                  label: Text('Open $label'),
+                  onPressed: () {
+                    Navigator.pop(sheet);
+                    final page = o.kind == 'sub'
+                        ? SubDetailScreen(id: o.id)
+                        : o.kind == 'rec'
+                            ? RecDetailScreen(id: o.id) as Widget
+                            : InstDetailScreen(id: o.id);
+                    Navigator.of(context).push(pageRoute(page));
+                  },
+                ),
+              ]);
+            })
           else
             Container(
               padding: const EdgeInsets.all(12),

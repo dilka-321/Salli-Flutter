@@ -3,6 +3,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'budget_screens.dart';
 import 'coming_soon.dart';
 import 'home_screen.dart';
 import 'theme.dart';
@@ -47,7 +48,7 @@ class _ShellState extends State<Shell> {
               },
             ),
             const SizedBox(height: 12),
-            Text('Loans, lending and subscriptions come in the next rounds — use the Salli web app for those meanwhile.',
+            Text('Subscriptions, recurring expenses and installments are in the Budget tab. Loans and lending come in the next round — use the Salli web app for those meanwhile.',
                 style: TextStyle(color: p.muted, fontSize: 12.5)),
           ]),
         ),
@@ -65,7 +66,7 @@ class _ShellState extends State<Shell> {
     final p = Palette.of(context);
     final pages = [
       const HomeScreen(),
-      const ComingSoon(title: 'Budget', icon: Icons.account_balance_wallet_outlined, round: 'Round 3'),
+      const BudgetTab(),
       const ComingSoon(title: 'Analytics', icon: Icons.insights_rounded, round: 'Round 4'),
       const ComingSoon(title: 'Reports', icon: Icons.description_outlined, round: 'Round 4'),
     ];
