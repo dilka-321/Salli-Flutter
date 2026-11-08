@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 import '../core/currency.dart';
 import '../core/store.dart';
 import '../core/util.dart';
+import '../core/ops.dart';
 import 'theme.dart';
+import 'transfers_screen.dart';
 import 'tx_edit_screen.dart';
 import 'widgets.dart';
 
@@ -148,6 +150,36 @@ void showTxDetail(BuildContext context, J t) {
                   onPressed: () {
                     Navigator.pop(sheet);
                     Navigator.of(context).push(pageRoute(TxEditScreen(type: '${t['type']}', existing: t)));
+                  },
+                ),
+              ),
+            ])
+          else if (t['group'] != null && s.transfers.any((o) => o['group'] == t['group']))
+            Row(children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: Icon(Icons.delete_outline, color: p.neg),
+                  label: Text('Delete', style: TextStyle(color: p.neg)),
+                  style: OutlinedButton.styleFrom(side: BorderSide(color: p.neg.withOpacity(.5))),
+                  onPressed: () async {
+                    final ok = await confirmDialog(sheet, 'Delete transfer?', 'Both sides of the transfer, any fee and any exchange gain/loss will be removed.');
+                    if (ok) {
+                      s.deleteTransfer('${t['group']}');
+                      if (sheet.mounted) Navigator.pop(sheet);
+                      if (context.mounted) toast(context, 'Transfer deleted');
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton.icon(
+                  icon: const Icon(Icons.edit_outlined),
+                  label: const Text('Edit transfer'),
+                  onPressed: () {
+                    final out = s.transfers.firstWhere((o) => o['group'] == t['group']);
+                    Navigator.pop(sheet);
+                    Navigator.of(context).push(pageRoute(TransferEditScreen(out: out)));
                   },
                 ),
               ),

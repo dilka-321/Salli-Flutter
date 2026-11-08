@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'util.dart';
 
 /// Starting data for a brand-new account (same categories as the web app).
@@ -22,7 +24,8 @@ Map<String, dynamic> newUserData(String name) {
   for (var i = 0; i < inc.length; i++) {
     cats.add({'id': 'ci$i', 'name': inc[i][0], 'icon': inc[i][1], 'kind': 'income', 'parent': null});
   }
-  return {
+  // round-trip through JSON so every list/map is growable and loosely typed, exactly like data loaded from the cloud
+  return jsonDecode(jsonEncode({
     'v': 2,
     'accounts': [
       {'id': uid(), 'name': 'Cash', 'currency': 'LKR', 'type': 'wallet', 'include': true, 'isDefault': true}
@@ -31,5 +34,5 @@ Map<String, dynamic> newUserData(String name) {
     'txns': [],
     'rates': [],
     'settings': {'name': name, 'base': 'LKR', 'theme': 'system', 'lang': 'en'},
-  };
+  })) as Map<String, dynamic>;
 }

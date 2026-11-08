@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../config.dart';
+import 'categories_screen.dart';
 import 'theme.dart';
+import 'transfers_screen.dart';
 import 'widgets.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -28,6 +30,25 @@ class SettingsScreen extends StatelessWidget {
                 Text(name.isEmpty ? 'Your profile' : name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
                 Text('${s.user?.email ?? ''}', style: TextStyle(color: p.muted)),
               ]),
+            ),
+          ]),
+        ),
+        const SectionTitle('Manage'),
+        GlassCard(
+          padding: EdgeInsets.zero,
+          child: Column(children: [
+            ListTile(
+              leading: Icon(Icons.category_outlined, color: p.accent),
+              title: const Text('Categories'),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => Navigator.of(context).push(pageRoute(const CategoriesScreen())),
+            ),
+            Divider(height: 1, color: p.line),
+            ListTile(
+              leading: Icon(Icons.swap_horiz_rounded, color: p.accent),
+              title: const Text('Account transfers'),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => Navigator.of(context).push(pageRoute(const TransfersScreen())),
             ),
           ]),
         ),
@@ -75,7 +96,7 @@ class SettingsScreen extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('${AppConfig.appName} native · ${AppConfig.version}', style: const TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: 6),
-            Text('Round 1: sign-in, offline storage and sync, dashboard, accounts and transactions. Other sections are being rebuilt and will arrive in the next rounds.',
+            Text('Round 2: sign-in, offline sync, dashboard, accounts, credit cards, transfers with your own exchange rate, categories and transactions. Other sections arrive in the next rounds.',
                 style: TextStyle(color: p.muted, fontSize: 13)),
           ]),
         ),

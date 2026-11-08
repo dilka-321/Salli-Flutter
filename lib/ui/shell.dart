@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'coming_soon.dart';
 import 'home_screen.dart';
 import 'theme.dart';
+import 'transfers_screen.dart';
 import 'tx_edit_screen.dart';
 import 'widgets.dart';
 
@@ -36,7 +37,17 @@ class _ShellState extends State<Shell> {
               Expanded(child: _QuickBtn(icon: Icons.north_east_rounded, label: 'Income', color: p.pos, onTap: () => _open(c, 'income'))),
             ]),
             const SizedBox(height: 12),
-            Text('Transfers, loans, lending and subscriptions come in the next rounds — use the Salli web app for those meanwhile.',
+            _QuickBtn(
+              icon: Icons.swap_horiz_rounded,
+              label: 'Transfer between accounts',
+              color: p.accent,
+              onTap: () {
+                Navigator.pop(c);
+                Navigator.of(context).push(pageRoute(const TransferEditScreen()));
+              },
+            ),
+            const SizedBox(height: 12),
+            Text('Loans, lending and subscriptions come in the next rounds — use the Salli web app for those meanwhile.',
                 style: TextStyle(color: p.muted, fontSize: 12.5)),
           ]),
         ),

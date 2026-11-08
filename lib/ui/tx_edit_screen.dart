@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../core/currency.dart';
 import '../core/store.dart';
 import '../core/util.dart';
+import 'categories_screen.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -147,6 +148,7 @@ class _TxEditScreenState extends State<TxEditScreen> {
                 setState(() => catId = '${c['id']}');
               },
             ),
+          ActionChip(avatar: const Icon(Icons.add_rounded, size: 18), label: const Text('New'), onPressed: () => showCategorySheet(context, kind: type)),
         ]),
         const SectionTitle('Account'),
         Wrap(spacing: 8, runSpacing: 8, children: [

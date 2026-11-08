@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../core/currency.dart';
 import '../core/currency_table.dart';
+import '../core/ops.dart';
 import '../core/store.dart';
 import '../core/util.dart';
 import 'theme.dart';
+import 'card_screen.dart';
 import 'transactions_screen.dart';
+import 'transfers_screen.dart';
 import 'widgets.dart';
 
 class AccountsScreen extends StatelessWidget {
@@ -15,12 +18,14 @@ class AccountsScreen extends StatelessWidget {
     final s = StoreScope.of(context);
     final p = Palette.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('My Accounts')),
+      appBar: AppBar(title: const Text('My Accounts'), actions: [
+        IconButton(tooltip: 'Transfers', icon: const Icon(Icons.swap_horiz_rounded), onPressed: () => Navigator.of(context).push(pageRoute(const TransfersScreen()))),
+      ]),
       floatingActionButton: FloatingActionButton(
         backgroundColor: p.accent,
         foregroundColor: p.accentInk,
         shape: const CircleBorder(),
-        onPressed: () => showWalletSheet(context),
+        onPressed: () => _addChooser(context),
         child: const Icon(Icons.add_rounded, size: 30),
       ),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 110), children: [
@@ -39,8 +44,9 @@ class AccountsScreen extends StatelessWidget {
           _AccCard(a: a),
           const SizedBox(height: 10),
         ],
-        if (s.cards.isNotEmpty) ...[
-          const SectionTitle('Credit cards'),
+        ...[
+          SectionTitle('Credit cards', action: 'Add card', onAction: () => showCardSheet(context)),
+          if (s.cards.isEmpty) const EmptyNote('No credit cards added.', icon: Icons.credit_card_off_outlined),
           for (final a in s.cards) ...[
             _AccCard(a: a),
             const SizedBox(height: 10),
@@ -63,7 +69,7 @@ class _AccCard extends StatelessWidget {
     final card = s.isCard(a);
     final limit = toD(a['limit']);
     return GlassCard(
-      onTap: () => _accountActions(context, a),
+      onTap: () => card ? Navigator.of(context).push(pageRoute(CardScreen(id: '${a['id']}'))) : _accountActions(context, a),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Container(
@@ -124,18 +130,36 @@ void _accountActions(BuildContext context, J a) {
             Navigator.of(context).push(pageRoute(_AccountTxns(accId: '${a['id']}')));
           },
         ),
-        if (!s.isCard(a))
-          ListTile(
-            leading: const Icon(Icons.edit_outlined),
-            title: const Text('Edit account'),
-            subtitle: const Text('Name, currency and balance'),
-            onTap: () {
-              Navigator.pop(c);
-              showWalletSheet(context, existing: a);
-            },
-          )
-        else
-          const ListTile(leading: Icon(Icons.info_outline), title: Text('Credit card settings'), subtitle: Text('Editing cards comes in round 2 — use the Salli web app for now.')),
+        ListTile(
+          leading: const Icon(Icons.swap_horiz_rounded),
+          title: const Text('Transfer from this account'),
+          onTap: () {
+            Navigator.pop(c);
+            Navigator.of(context).push(pageRoute(TransferEditScreen(presetFrom: '${a['id']}')));
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.edit_outlined),
+          title: const Text('Edit account'),
+          subtitle: const Text('Name, currency and balance'),
+          onTap: () {
+            Navigator.pop(c);
+            showWalletSheet(context, existing: a);
+          },
+        ),
+        ListTile(
+          leading: Icon(Icons.delete_outline, color: Palette.of(c).neg),
+          title: Text('Delete account', style: TextStyle(color: Palette.of(c).neg)),
+          onTap: () async {
+            Navigator.pop(c);
+            final n = s.txCount('${a['id']}');
+            final ok = await confirmDialog(context, 'Delete account?', n > 0 ? 'This also deletes its $n transaction${n > 1 ? 's' : ''}. This can’t be undone.' : 'This can’t be undone.');
+            if (ok) {
+              s.deleteAccount('${a['id']}');
+              if (context.mounted) toast(context, 'Wallet deleted successfully');
+            }
+          },
+        ),
         const SizedBox(height: 8),
       ]),
     ),
@@ -164,6 +188,7 @@ void showWalletSheet(BuildContext context, {J? existing}) {
   final name = TextEditingController(text: existing?['name']?.toString() ?? '');
   final bal = TextEditingController(text: existing == null ? '' : s.accBal(existing).toStringAsFixed(2));
   String cur = (existing?['currency'] ?? s.base).toString();
+  final locked = existing != null && s.hasRealTx('${existing['id']}');
   String? err;
   showModalBottomSheet(
     context: context,
@@ -177,13 +202,16 @@ void showWalletSheet(BuildContext context, {J? existing}) {
           TextField(controller: name, decoration: const InputDecoration(labelText: 'Account name')),
           const SizedBox(height: 12),
           OutlinedButton.icon(
-            icon: const Icon(Icons.currency_exchange_rounded),
+            icon: Icon(locked ? Icons.lock_outline : Icons.currency_exchange_rounded),
             label: Text('$cur — ${currencyName(cur)}'),
-            onPressed: () async {
-              final picked = await pickCurrency(c, cur);
-              if (picked != null) set(() => cur = picked);
-            },
+            onPressed: locked
+                ? null
+                : () async {
+                    final picked = await pickCurrency(c, cur);
+                    if (picked != null) set(() => cur = picked);
+                  },
           ),
+          if (locked) Text('Currency cannot be changed after transactions exist', style: TextStyle(color: Palette.of(c).muted, fontSize: 12)),
           const SizedBox(height: 12),
           TextField(
             controller: bal,
@@ -228,6 +256,33 @@ Future<String?> pickCurrency(BuildContext context, String current) {
             trailing: cu.code == current ? Icon(Icons.check_rounded, color: Palette.of(c).accent) : null,
             onTap: () => Navigator.pop(c, cu.code),
           ),
+      ]),
+    ),
+  );
+}
+
+void _addChooser(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    builder: (c) => SafeArea(
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        ListTile(
+          leading: const Icon(Icons.account_balance_wallet_outlined),
+          title: const Text('Wallet or bank account'),
+          onTap: () {
+            Navigator.pop(c);
+            showWalletSheet(context);
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.credit_card_rounded),
+          title: const Text('Credit card'),
+          onTap: () {
+            Navigator.pop(c);
+            showCardSheet(context);
+          },
+        ),
+        const SizedBox(height: 8),
       ]),
     ),
   );
