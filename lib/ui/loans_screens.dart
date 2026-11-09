@@ -131,6 +131,8 @@ class LoanDetailScreen extends StatelessWidget {
         Center(child: Badge2(l['type'] == 'bank' ? 'BANK' : 'PERSONAL', color: r > 0 ? p.pos : p.muted)),
         moreMenu([
           ('Edit loan', Icons.edit_outlined, () => Navigator.of(context).push(pageRoute(LoanFormScreen(existing: l))), false),
+          ('Close loan', Icons.check_circle_rounded, () => showCloseLoanSheet(context, id), false),
+          ('Manual override', Icons.tune_rounded, () => showLoanOverrideSheet(context, id), false),
           (
             'Delete loan',
             Icons.delete_outline,
@@ -396,6 +398,185 @@ Future<void> showLoanPay(BuildContext context, String id) async {
   if (r == null) return;
   s.payLoan(id, v: r.v, cur: r.cur, fee: r.fee, accId: r.accId, date: r.date, note: r.note);
   if (context.mounted) toast(context, s.loanRemain(l) <= 0 ? 'Loan fully paid' : 'Payment recorded');
+}
+
+/// Bottom sheet with two big option rows (Close Loan / Manual Override).
+Future<int?> _loanOptionSheet(BuildContext context, String title, List<(IconData, String, String, Color?)> opts) {
+  return showModalBottomSheet<int>(
+    context: context,
+    showDragHandle: true,
+    builder: (c) {
+      final p = Palette.of(c);
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 14),
+            for (var i = 0; i < opts.length; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Builder(builder: (_) {
+                  final o = opts[i];
+                  final col = o.$4;
+                  return Material(
+                    color: col == null ? p.fg.withOpacity(.05) : Color.alphaBlend(col.withOpacity(.12), p.card),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: col == null ? p.line : col.withOpacity(.45))),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: () => Navigator.pop(c, i),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(color: col ?? p.muted.withOpacity(.35), borderRadius: BorderRadius.circular(11)),
+                            child: Icon(o.$1, color: col == null ? p.fg : Colors.black87, size: 22),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text(o.$2, style: TextStyle(fontWeight: FontWeight.w800, color: col ?? p.fg)),
+                              const SizedBox(height: 2),
+                              Text(o.$3, style: TextStyle(color: p.muted, fontSize: 12)),
+                            ]),
+                          ),
+                          Icon(Icons.chevron_right_rounded, color: p.muted),
+                        ]),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+          ]),
+        ),
+      );
+    },
+  );
+}
+
+/// Loan ⋮ → Close Loan: close without paying, or pay an amount and complete.
+Future<void> showCloseLoanSheet(BuildContext context, String id) async {
+  final s = StoreScope.read(context);
+  final l = s.loan(id);
+  if (l == null) return;
+  if (s.loanRemain(l) <= 0) {
+    toast(context, 'This loan is already paid');
+    return;
+  }
+  final p = Palette.of(context);
+  final k = await _loanOptionSheet(context, 'Close Loan', [
+    (Icons.check_circle_outline_rounded, 'Close without paying', 'Mark loan as paid without recording a payment', null),
+    (Icons.account_balance_wallet_rounded, 'Pay and complete', 'Pay an amount from your account and close the loan', p.pos),
+  ]);
+  if (k == null || !context.mounted) return;
+  final c = s.lcur(l);
+  final rem = s.loanRemain(l);
+  if (k == 0) {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: const Text('Close without paying'),
+        content: Text('Are you sure you want to close the loan "${l['name']}" without recording a payment?\n\nRemaining balance: ${money(rem, c)}\n\nThis will mark the loan as paid and remove it from liabilities.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(d, true), child: const Text('Close without paying')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    s.settleLoan(id, mode: 'closed');
+    if (context.mounted) toast(context, 'Loan closed');
+    return;
+  }
+  final amt = TextEditingController();
+  final ws = s.wallets;
+  String? acc = s.defaultAccId;
+  if (acc != null && !ws.any((a) => a['id'] == acc)) acc = null;
+  acc ??= ws.isEmpty ? null : '${ws.first['id']}';
+  final res = await showDialog<double>(
+    context: context,
+    builder: (d) => AlertDialog(
+      title: const Text('Pay and complete'),
+      content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('Current remaining balance: ${money(rem, c)}', style: TextStyle(color: Palette.of(d).muted, fontSize: 12.5)),
+        const SizedBox(height: 12),
+        TextField(controller: amt, autofocus: true, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Amount')),
+        const SizedBox(height: 12),
+        Text('Pay from account', style: TextStyle(color: Palette.of(d).muted, fontSize: 12.5)),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          initialValue: acc,
+          isExpanded: true,
+          items: [for (final a in ws) DropdownMenuItem(value: '${a['id']}', child: Text('${a['name']}', overflow: TextOverflow.ellipsis))],
+          onChanged: (v) => acc = v,
+        ),
+      ]),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(d), child: const Text('Cancel')),
+        FilledButton(
+          onPressed: () {
+            final v = parseAmount(amt.text) ?? 0;
+            if (v <= 0) return toast(d, 'Enter an amount above zero');
+            if (acc == null) return toast(d, 'Choose an account');
+            Navigator.pop(d, v);
+          },
+          child: const Text('Pay and complete'),
+        ),
+      ],
+    ),
+  );
+  if (res == null || acc == null) return;
+  s.payLoan(id, v: res, cur: c, fee: 0, accId: acc!, date: today(), note: 'Loan payment - ${l['name']}');
+  s.settleLoan(id, mode: 'paid');
+  if (context.mounted) toast(context, 'Loan paid and closed');
+}
+
+/// Loan ⋮ → Manual Override: mark as settled, or reopen with a custom remaining principal.
+Future<void> showLoanOverrideSheet(BuildContext context, String id) async {
+  final s = StoreScope.read(context);
+  final l = s.loan(id);
+  if (l == null) return;
+  final p = Palette.of(context);
+  final k = await _loanOptionSheet(context, 'Manual Override', [
+    (Icons.check_rounded, 'Mark as Settled', 'Mark this loan as settled immediately', p.pos),
+    (Icons.tune_rounded, 'Reopen with Custom Balance', 'Set a custom remaining principal and mark as active', p.warn),
+  ]);
+  if (k == null || !context.mounted) return;
+  if (k == 0) {
+    s.settleLoan(id, mode: 'manual');
+    toast(context, 'Loan marked as settled manually.');
+    return;
+  }
+  final c = s.lcur(l);
+  final maxV = round2(math.max(toD(l['principal']), s.loanTotal(l)));
+  final ctl = TextEditingController(text: s.loanOpenRemain(l).toStringAsFixed(2));
+  final v = await showDialog<double>(
+    context: context,
+    builder: (d) => AlertDialog(
+      title: const Text('Reopen with Custom Balance'),
+      content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('Enter remaining principal between 0 and ${money(maxV, c)}', style: TextStyle(color: Palette.of(d).muted, fontSize: 12.5)),
+        const SizedBox(height: 12),
+        TextField(controller: ctl, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Remaining Principal')),
+      ]),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(d), child: const Text('Cancel')),
+        FilledButton(
+          onPressed: () {
+            final x = parseAmount(ctl.text);
+            if (x == null || x < 0 || x > maxV) return toast(d, 'Enter a value between 0 and ${money(maxV, c)}');
+            Navigator.pop(d, x);
+          },
+          child: const Text('Save'),
+        ),
+      ],
+    ),
+  );
+  if (v == null) return;
+  s.reopenLoan(id, v);
+  if (context.mounted) toast(context, 'Loan reopened with a custom balance');
 }
 
 Future<void> showLoanPayEdit(BuildContext context, String lid, String pid) async {

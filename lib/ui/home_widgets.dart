@@ -310,42 +310,54 @@ class _TrendCardState extends State<TrendCard> {
             onLongPressMoveUpdate: (d) => pick(d.localPosition, w),
             child: SizedBox(
               height: 190,
-              child: Stack(clipBehavior: Clip.none, children: [
-                Positioned.fill(
-                  child: TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0, end: 1),
-                    duration: const Duration(milliseconds: 800),
-                    curve: Curves.easeOutCubic,
-                    builder: (_, t, __) => CustomPaint(
-                      painter: _TrendPainter(ser, colors, t, si, p.line, p.muted, p.bg, p.accent, weekly ? [for (final d in days) wd[parseDate(d).weekday - 1]] : null),
-                    ),
-                  ),
-                ),
-                if (si != null)
-                  Positioned(
-                    top: 4,
-                    left: (() {
-                      const pl = 38.0;
-                      final x = pl + (w - pl - 6) * (days.length == 1 ? 0 : si / (days.length - 1));
-                      return x > w / 2 ? x - 128 : x + 10;
-                    })(),
-                    child: IgnorePointer(
-                      child: Container(
-                        width: 118,
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(color: p.card, borderRadius: BorderRadius.circular(10), border: Border.all(color: p.line), boxShadow: [BoxShadow(color: Colors.black.withOpacity(.2), blurRadius: 10)]),
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                          for (var k = 0; k < 4; k++) ...[
-                            Text(names[k], style: TextStyle(color: colors[k], fontSize: 10.5)),
-                            Text(moneyB(s, ser[k][si]), style: TextStyle(color: colors[k], fontSize: 11.5, fontWeight: FontWeight.w800)),
-                          ],
-                          const SizedBox(height: 2),
-                          Text(fmtDate(days[si]), style: TextStyle(color: p.muted, fontSize: 10.5)),
-                        ]),
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 800),
+                curve: Curves.easeOutCubic,
+                builder: (_, t, __) => TweenAnimationBuilder<double>(
+                // glide the cursor, dots and tooltip smoothly to the tapped day
+                key: ValueKey('trendSel_${weekly}_${si == null}'),
+                tween: Tween(begin: (si ?? 0).toDouble(), end: (si ?? 0).toDouble()),
+                duration: const Duration(milliseconds: 380),
+                curve: Curves.easeOutCubic,
+                builder: (_, f, __) {
+                  final sf = si == null ? null : f;
+                  return Stack(clipBehavior: Clip.none, children: [
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: _TrendPainter(ser, colors, t, sf, p.line, p.muted, p.bg, p.accent, weekly ? [for (final d in days) wd[parseDate(d).weekday - 1]] : null),
                       ),
                     ),
-                  ),
-              ]),
+                    if (si != null && sf != null)
+                      Positioned(
+                        top: 4,
+                        left: (() {
+                          const pl = 38.0;
+                          final x = pl + (w - pl - 6) * (days.length == 1 ? 0 : sf / (days.length - 1));
+                          // slide the tooltip from the right side of the cursor to the left smoothly around the middle
+                          final k = ((x - w / 2) / 40 + .5).clamp(0.0, 1.0).toDouble();
+                          return (x + 10) + (x - 128 - (x + 10)) * k;
+                        })(),
+                        child: IgnorePointer(
+                          child: Container(
+                            width: 118,
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(color: p.card, borderRadius: BorderRadius.circular(10), border: Border.all(color: p.line), boxShadow: [BoxShadow(color: Colors.black.withOpacity(.2), blurRadius: 10)]),
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                              for (var k = 0; k < 4; k++) ...[
+                                Text(names[k], style: TextStyle(color: colors[k], fontSize: 10.5)),
+                                Text(moneyB(s, ser[k][si]), style: TextStyle(color: colors[k], fontSize: 11.5, fontWeight: FontWeight.w800)),
+                              ],
+                              const SizedBox(height: 2),
+                              Text(fmtDate(days[si]), style: TextStyle(color: p.muted, fontSize: 10.5)),
+                            ]),
+                          ),
+                        ),
+                      ),
+                  ]);
+                },
+                ),
+              ),
             ),
           );
         }),
@@ -359,7 +371,7 @@ class _TrendPainter extends CustomPainter {
   final List<List<double>> ser;
   final List<Color> colors;
   final double t;
-  final int? sel;
+  final double? sel;
   final Color line, muted, bg, accent;
   final List<String>? labels;
 
@@ -400,12 +412,15 @@ class _TrendPainter extends CustomPainter {
         ..color = colors[k]);
     }
     if (sel != null) {
-      final xx = x(sel!);
+      final f = sel!.clamp(0.0, (n - 1).toDouble()).toDouble();
+      final i0 = f.floor(), i1 = math.min(n - 1, i0 + 1);
+      final fr = f - i0;
+      final xx = n == 1 ? x(0) : pl + (size.width - pl - 6) * (f / (n - 1));
       canvas.drawLine(Offset(xx, pt), Offset(xx, size.height - pb), Paint()
         ..color = accent
         ..strokeWidth = 1.4);
       for (var k = 0; k < ser.length; k++) {
-        final c = Offset(xx, y(ser[k][sel!]));
+        final c = Offset(xx, y(ser[k][i0] + (ser[k][i1] - ser[k][i0]) * fr));
         canvas.drawCircle(c, 5.2, Paint()..color = bg);
         canvas.drawCircle(c, 4, Paint()..color = colors[k]);
       }

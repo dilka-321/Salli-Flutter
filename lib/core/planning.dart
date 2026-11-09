@@ -72,7 +72,9 @@ extension Round4Ops on AppStore {
 
   double loanTotal(J l) => (toD(l['rate']) > 0 && toD(l['months']) > 0) ? emiOf(l) * toD(l['months']) : toD(l['principal']);
   double loanPaid(J l) => _items(l, 'payments').fold(0.0, (a, p) => a + toD(p['amount']));
-  double loanRemain(J l) => math.max(0.0, round2(loanTotal(l) - loanPaid(l)));
+  /// Remaining balance. A loan closed / settled manually counts as 0; "Reopen with Custom Balance" keeps an adjustment (remainAdj).
+  double loanRemain(J l) => l['settled'] == true ? 0.0 : loanOpenRemain(l);
+  double loanOpenRemain(J l) => math.max(0.0, round2(loanTotal(l) - loanPaid(l) - toD(l['remainAdj'])));
   double emiB(J l) => lconv(l, emiOf(l), lcur(l), base);
 
   List<J> get goals => _l4('goals');

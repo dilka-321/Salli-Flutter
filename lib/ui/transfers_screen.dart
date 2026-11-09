@@ -5,7 +5,6 @@ import '../core/currency.dart';
 import '../core/ops.dart';
 import '../core/store.dart';
 import '../core/util.dart';
-import 'plans_common.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -217,35 +216,65 @@ class _TransferEditScreenState extends State<TransferEditScreen> {
   Future<void> _pick(bool isFrom) async {
     final s = StoreScope.read(context);
     final other = isFrom ? to : from;
+    final list = s.accounts.where((a) => a['id'] != other).toList();
     final id = await showModalBottomSheet<String>(
       context: context,
-      builder: (c) => SafeArea(
-        child: ListView(shrinkWrap: true, children: [
-          Padding(padding: const EdgeInsets.fromLTRB(20, 0, 20, 8), child: Text(isFrom ? 'From Account' : 'To Account', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800))),
-          for (final a in s.accounts.where((a) => a['id'] != other))
-            ListTile(
-              leading: Icon(s.isCard(a) ? Icons.credit_card_rounded : Icons.account_balance_wallet_outlined),
-              title: Text('${a['name']}'),
-              subtitle: Text(money(s.accBal(a), '${a['currency']}')),
-              trailing: (isFrom ? from : to) == a['id'] ? Icon(Icons.check_rounded, color: Palette.of(c).accent) : null,
-              onTap: () => Navigator.pop(c, '${a['id']}'),
-            ),
-        ]),
-      ),
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (c) {
+        final p = Palette.of(c);
+        final cur = isFrom ? from : to;
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.of(c).size.height * .75),
+          child: SafeArea(
+            top: false,
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Padding(padding: const EdgeInsets.fromLTRB(20, 0, 20, 8), child: Text(isFrom ? 'From Account' : 'To Account', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800))),
+              Flexible(
+                child: ListView(shrinkWrap: true, padding: const EdgeInsets.only(bottom: 12), children: [
+                  for (final a in list)
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+                      leading: Icon(s.isCard(a) ? Icons.credit_card_rounded : Icons.account_balance_wallet_outlined, color: p.fg.withOpacity(.75)),
+                      title: Text('${a['name']}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Text(money(s.accBal(a), '${a['currency']}'), style: TextStyle(color: p.muted, fontSize: 12.5)),
+                      trailing: cur == a['id'] ? Icon(Icons.check_rounded, color: p.accent) : null,
+                      onTap: () => Navigator.pop(c, '${a['id']}'),
+                    ),
+                ]),
+              ),
+            ]),
+          ),
+        );
+      },
     );
-    if (id == null) return;
-    setState(() {
-      if ((isFrom ? from : to) != id) {
-        rateCtl.clear();
-        recvCtl.clear();
-        dir = null;
-      }
-      if (isFrom) {
-        from = id;
-      } else {
-        to = id;
-      }
-    });
+    _setAcc(isFrom, id);
+  }
+
+  Widget _accBox(Palette p, String label, J? a, bool isFrom) {
+    final s = StoreScope.read(context);
+    return GlassCard(
+      key: ValueKey(isFrom ? 'fromAcc' : 'toAcc'),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      onTap: () => _pick(isFrom),
+      child: Row(children: [
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(color: p.accent.withOpacity(.14), borderRadius: BorderRadius.circular(12)),
+          child: Icon(a != null && s.isCard(a) ? Icons.credit_card_rounded : Icons.account_balance_wallet_outlined, color: p.accent, size: 22),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(label, style: TextStyle(color: p.muted, fontSize: 11.5)),
+            Text(a == null ? 'Choose account' : '${a['name']}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+            if (a != null) Text('${a['currency']} · ${money(s.accBal(a), '${a['currency']}')}', style: TextStyle(color: p.muted, fontSize: 12)),
+          ]),
+        ),
+        Icon(Icons.chevron_right_rounded, color: p.muted),
+      ]),
+    );
   }
 
   void _setAcc(bool isFrom, String? id) {
@@ -263,15 +292,6 @@ class _TransferEditScreenState extends State<TransferEditScreen> {
       }
     });
   }
-
-  Widget _accHead(Palette p, String label, String? sub) => Padding(
-        padding: const EdgeInsets.fromLTRB(4, 6, 4, 8),
-        child: Row(children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
-          const Spacer(),
-          if (sub != null) Text(sub, style: TextStyle(color: p.muted, fontSize: 12.5)),
-        ]),
-      );
 
   void _save() {
     final s = StoreScope.read(context);
@@ -318,8 +338,7 @@ class _TransferEditScreenState extends State<TransferEditScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(editGroup != null ? 'Edit Transfer' : 'Transfer Between Accounts')),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 40), children: [
-        _accHead(p, 'From account', fa == null ? null : '${fa['currency']} · ${money(s.accBal(fa), '${fa['currency']}')}'),
-        AccountChips(key: const ValueKey('fromAcc'), value: from, exclude: to, onChanged: (id) => _setAcc(true, id)),
+        _accBox(p, 'From account', fa, true),
         Center(
           child: IconButton(
             tooltip: 'Swap accounts',
@@ -334,8 +353,7 @@ class _TransferEditScreenState extends State<TransferEditScreen> {
             }),
           ),
         ),
-        _accHead(p, 'To account', ta == null ? null : '${ta['currency']} · ${money(s.accBal(ta), '${ta['currency']}')}'),
-        AccountChips(key: const ValueKey('toAcc'), value: to, exclude: from, onChanged: (id) => _setAcc(false, id)),
+        _accBox(p, 'To account', ta, false),
         const SizedBox(height: 14),
         TextField(
           key: const ValueKey('amtField'),

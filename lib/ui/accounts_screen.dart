@@ -8,6 +8,7 @@ import '../core/util.dart';
 import 'theme.dart';
 import 'card_screen.dart';
 import 'transactions_screen.dart';
+import 'tx_edit_screen.dart';
 import 'transfers_screen.dart';
 import 'widgets.dart';
 
@@ -166,20 +167,423 @@ void _accountActions(BuildContext context, J a) {
   );
 }
 
-class _AccountTxns extends StatelessWidget {
+/// One account's page: green header with balance and the month's In / Out, month chips, day groups and a + button.
+class _AccountTxns extends StatefulWidget {
   const _AccountTxns({required this.accId});
   final String accId;
   @override
+  State<_AccountTxns> createState() => _AccountTxnsState();
+}
+
+class _AccountTxnsState extends State<_AccountTxns> {
+  String month = ym(today());
+
+  static const _mn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  String _chip(String k) => "${_mn[int.parse(k.substring(5, 7)) - 1]} '${k.substring(2, 4)}";
+
+  Future<void> _menu(BuildContext context, int v, J a) async {
+    final s = StoreScope.read(context);
+    final id = widget.accId;
+    switch (v) {
+      case 0:
+        _editAccountSheet(context, a);
+      case 1:
+        showWalletSheet(context);
+      case 2:
+        _correctBalanceSheet(context, a);
+      case 3:
+        for (final w in s.wallets) {
+          w['isDefault'] = w['id'] == id;
+        }
+        s.commit();
+        toast(context, '${a['name']} is now your default wallet');
+      case 4:
+        final n = s.txCount(id);
+        final ok = await confirmDialog(context, 'Delete account?', n > 0 ? 'This also deletes its $n transaction${n > 1 ? 's' : ''}. This can’t be undone.' : 'This can’t be undone.');
+        if (ok) {
+          s.deleteAccount(id);
+          if (context.mounted) {
+            Navigator.pop(context);
+            toast(context, 'Wallet deleted successfully');
+          }
+        }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final s = StoreScope.of(context);
-    final list = s.txns.where((t) => t['accId'] == accId).toList();
+    final p = Palette.of(context);
+    final a = s.acc(widget.accId);
+    if (a == null) return Scaffold(appBar: AppBar(), body: const EmptyNote('This account was deleted.'));
+    final cur = '${a['currency']}';
+    final all = s.txns.where((t) => t['accId'] == widget.accId).toList();
+    // months: this month back to the oldest transaction (at least 12 months)
+    final now = ym(today());
+    var oldest = addMonthsYm(now, -11);
+    for (final t in all) {
+      final k = ym('${t['date']}');
+      if (k.length == 7 && k.compareTo(oldest) < 0) oldest = k;
+    }
+    final months = <String>[];
+    for (var k = now; k.compareTo(oldest) >= 0 && months.length < 240; k = addMonthsYm(k, -1)) {
+      months.add(k);
+    }
+    if (!months.contains(month)) months.add(month);
+    final list = all.where((t) => ym('${t['date']}') == month).toList()
+      ..sort((x, y) => ('${y['date']}${y['time'] ?? ''}').compareTo('${x['date']}${x['time'] ?? ''}'));
+    final inn = list.where((t) => t['type'] == 'income').fold(0.0, (v, t) => v + toD(t['amount']));
+    final out = list.where((t) => t['type'] != 'income').fold(0.0, (v, t) => v + toD(t['amount']));
+    final groups = <String, List<J>>{};
+    for (final t in list) {
+      groups.putIfAbsent('${t['date']}', () => []).add(t);
+    }
+    final bal = s.accBal(a);
+    final top = MediaQuery.of(context).padding.top;
+    const white = Colors.white;
+
+    Widget pill(IconData ic, String label, double v) => Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(color: Colors.black.withOpacity(.16), borderRadius: BorderRadius.circular(99), border: Border.all(color: white.withOpacity(.22))),
+            child: Row(children: [
+              Icon(ic, size: 16, color: white),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                  Text(label, style: TextStyle(color: white.withOpacity(.75), fontSize: 10)),
+                  FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(money(v, cur), style: const TextStyle(color: white, fontWeight: FontWeight.w800, fontSize: 13))),
+                ]),
+              ),
+            ]),
+          ),
+        );
+
+    final header = Container(
+      padding: EdgeInsets.fromLTRB(6, top + 4, 6, 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color.lerp(p.accent, white, .08)!, Color.lerp(p.accent, Colors.black, .45)!]),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          IconButton(icon: const Icon(Icons.arrow_back_rounded, color: white), onPressed: () => Navigator.maybePop(context)),
+          const Spacer(),
+          PopupMenuButton<int>(
+            icon: const Icon(Icons.more_vert_rounded, color: white),
+            onSelected: (v) => _menu(context, v, a),
+            itemBuilder: (c) {
+              final cp = Palette.of(c);
+              PopupMenuItem<int> it(int v, IconData ic, String t, {Color? col}) => PopupMenuItem<int>(
+                    value: v,
+                    child: Row(children: [Icon(ic, size: 20, color: col), const SizedBox(width: 12), Text(t, style: TextStyle(color: col))]),
+                  );
+              return [
+                it(0, Icons.edit_rounded, 'Edit Account'),
+                it(1, Icons.add_circle_outline_rounded, 'Create Account'),
+                const PopupMenuDivider(),
+                it(2, Icons.tune_rounded, 'Correct Balance'),
+                it(3, Icons.star_border_rounded, 'Set as Default Wallet'),
+                const PopupMenuDivider(),
+                it(4, Icons.delete_rounded, 'Delete Account', col: cp.neg),
+              ];
+            },
+          ),
+        ]),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('${a['name']}', style: TextStyle(color: white.withOpacity(.92), fontSize: 15, fontWeight: FontWeight.w600)),
+            FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(money(bal, cur), style: const TextStyle(color: white, fontSize: 30, fontWeight: FontWeight.w800))),
+            const SizedBox(height: 8),
+            Row(children: [
+              Icon(Icons.calendar_today_rounded, size: 11, color: white.withOpacity(.75)),
+              const SizedBox(width: 5),
+              Text(fmtMonth(month), style: TextStyle(color: white.withOpacity(.75), fontSize: 11)),
+            ]),
+            const SizedBox(height: 6),
+            Row(children: [pill(Icons.south_west_rounded, 'In', inn), const SizedBox(width: 10), pill(Icons.north_east_rounded, 'Out', out)]),
+          ]),
+        ),
+      ]),
+    );
+
+    final body = <Widget>[
+      Row(children: [
+        Container(width: 3, height: 16, decoration: BoxDecoration(color: p.accent, borderRadius: BorderRadius.circular(2))),
+        const SizedBox(width: 8),
+        const Expanded(child: Text('Recent Transactions', style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800))),
+        Container(
+          constraints: const BoxConstraints(minWidth: 22),
+          height: 22,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(color: p.fg.withOpacity(.08), borderRadius: BorderRadius.circular(99), border: Border.all(color: p.line)),
+          child: Text('${list.length}', style: TextStyle(color: p.muted, fontSize: 11, fontWeight: FontWeight.w700)),
+        ),
+      ]),
+      const SizedBox(height: 12),
+      SizedBox(
+        height: 38,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: months.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 8),
+          itemBuilder: (_, i) {
+            final k = months[i];
+            final on = k == month;
+            return Material(
+              color: on ? p.accent : Colors.transparent,
+              shape: StadiumBorder(side: BorderSide(color: on ? p.accent : p.line)),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () => setState(() => month = k),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Center(child: Text(_chip(k), style: TextStyle(color: on ? p.accentInk : p.muted, fontSize: 12.5, fontWeight: on ? FontWeight.w800 : FontWeight.w500))),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+      const SizedBox(height: 6),
+      Text('Showing ${fmtMonth(month)} transactions', style: TextStyle(color: p.muted, fontSize: 11.5)),
+      if (list.isEmpty)
+        Padding(
+          padding: const EdgeInsets.only(top: 50),
+          child: Column(children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(color: p.accent.withOpacity(.12), borderRadius: BorderRadius.circular(16)),
+              child: Icon(Icons.receipt_long_rounded, color: p.accent, size: 28),
+            ),
+            const SizedBox(height: 12),
+            const Text('No transactions', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+            const SizedBox(height: 4),
+            Text('No transactions for this period', style: TextStyle(color: p.muted, fontSize: 12.5)),
+          ]),
+        ),
+    ];
+    groups.forEach((d, arr) {
+      final gi = arr.where((t) => t['type'] == 'income').fold(0.0, (v, t) => v + toD(t['amount']));
+      final go = arr.where((t) => t['type'] != 'income').fold(0.0, (v, t) => v + toD(t['amount']));
+      body.add(Padding(
+        padding: const EdgeInsets.fromLTRB(0, 16, 0, 8),
+        child: Row(children: [
+          Container(
+            width: 24,
+            height: 24,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(color: p.accent, borderRadius: BorderRadius.circular(6)),
+            child: Text('${parseDate(d).day}', style: TextStyle(color: p.accentInk, fontSize: 11.5, fontWeight: FontWeight.w800)),
+          ),
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+            decoration: BoxDecoration(color: p.accent.withOpacity(.16), borderRadius: BorderRadius.circular(6)),
+            child: Text(weekday(d), style: TextStyle(color: p.accent, fontSize: 12, fontWeight: FontWeight.w700)),
+          ),
+          const Spacer(),
+          if (gi > 0) ...[Icon(Icons.south_west_rounded, size: 13, color: p.pos), const SizedBox(width: 3), Text(money(gi, cur), style: TextStyle(color: p.pos, fontSize: 12, fontWeight: FontWeight.w700))],
+          if (gi > 0 && go > 0) const SizedBox(width: 10),
+          if (go > 0) ...[Icon(Icons.north_east_rounded, size: 13, color: p.neg), const SizedBox(width: 3), Text(money(go, cur), style: TextStyle(color: p.neg, fontSize: 12, fontWeight: FontWeight.w700))],
+        ]),
+      ));
+      for (final t in arr) {
+        final inc = t['type'] == 'income';
+        final col = inc ? p.pos : p.neg;
+        body.add(Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: GlassCard(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            onTap: () => showTxDetail(context, t),
+            child: Row(children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(color: col.withOpacity(.14), shape: BoxShape.circle),
+                child: Icon(inc ? Icons.south_west_rounded : Icons.north_east_rounded, color: col, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(s.txTitle(t), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5)),
+                  const SizedBox(height: 2),
+                  Text(s.accName(t['accId']), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: p.muted, fontSize: 12)),
+                ]),
+              ),
+              const SizedBox(width: 8),
+              Text(money(toD(t['amount']), cur), style: TextStyle(color: col, fontWeight: FontWeight.w800, fontSize: 14.5)),
+            ]),
+          ),
+        ));
+      }
+    });
+
     return Scaffold(
-      appBar: AppBar(title: Text(s.accName(accId))),
-      body: ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 40), children: [
-        if (list.isEmpty) const EmptyNote('No transactions in this account yet.') else TxGroups(list: list, onOpen: (t) => showTxDetail(context, t)),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: p.accent,
+        foregroundColor: p.accentInk,
+        shape: const CircleBorder(),
+        onPressed: () => Navigator.of(context).push(pageRoute(TxEditScreen(type: 'expense', draft: <String, dynamic>{'accId': widget.accId}))),
+        child: const Icon(Icons.add_rounded, size: 30),
+      ),
+      body: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        header,
+        Expanded(child: ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 110), children: body)),
       ]),
     );
   }
+}
+
+/// Account page ⋮ → Edit Account.
+void _editAccountSheet(BuildContext context, J a) {
+  final s = StoreScope.read(context);
+  final id = '${a['id']}';
+  final name = TextEditingController(text: '${a['name'] ?? ''}');
+  final bal = TextEditingController(text: s.accBal(a).toStringAsFixed(2));
+  String cur = '${a['currency'] ?? s.base}';
+  final locked = s.hasRealTx(id);
+  String? err;
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (c) => StatefulBuilder(builder: (c, set) {
+      final p = Palette.of(c);
+      return Padding(
+        padding: EdgeInsets.fromLTRB(18, 0, 18, MediaQuery.of(c).viewInsets.bottom + 18),
+        child: SafeArea(
+          top: false,
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
+              Container(width: 3, height: 16, decoration: BoxDecoration(color: p.accent, borderRadius: BorderRadius.circular(2))),
+              const SizedBox(width: 8),
+              const Text('Edit Account', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+            ]),
+            const SizedBox(height: 16),
+            TextField(controller: name, decoration: const InputDecoration(hintText: 'Account name', prefixIcon: Icon(Icons.label_outline_rounded))),
+            const SizedBox(height: 12),
+            Material(
+              color: p.fg.withOpacity(.04),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: p.line)),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: locked
+                    ? null
+                    : () async {
+                        final picked = await pickCurrency(c, cur);
+                        if (picked != null) set(() => cur = picked);
+                      },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  child: Row(children: [
+                    Icon(locked ? Icons.lock_outline_rounded : Icons.currency_exchange_rounded, size: 20, color: p.muted),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('$cur — ${currencyName(cur)}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                        if (locked) Text('Currency cannot be changed after transactions exist', style: TextStyle(color: p.muted, fontSize: 11.5)),
+                      ]),
+                    ),
+                    if (!locked) Icon(Icons.chevron_right_rounded, color: p.muted),
+                  ]),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: bal,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+              decoration: InputDecoration(prefixText: '${currencySymbol(cur)}  ', helperText: 'Enter your current account balance.'),
+            ),
+            if (err != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(err!, style: TextStyle(color: p.neg))),
+            const SizedBox(height: 18),
+            Row(children: [
+              Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(c), child: const Text('Cancel'))),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () {
+                    if (name.text.trim().isEmpty) return set(() => err = 'Enter an account name.');
+                    final b = double.tryParse(bal.text.replaceAll(',', '').trim()) ?? 0;
+                    s.saveWallet(id: id, name: name.text.trim(), currency: cur, balance: b);
+                    Navigator.pop(c);
+                    toast(context, 'Wallet updated successfully');
+                  },
+                  child: const Text('Save'),
+                ),
+              ),
+            ]),
+          ]),
+        ),
+      );
+    }),
+  );
+}
+
+/// Account page ⋮ → Correct Balance: adds a correction entry for the difference.
+void _correctBalanceSheet(BuildContext context, J a) {
+  final s = StoreScope.read(context);
+  final id = '${a['id']}';
+  final cb = s.accBal(a);
+  final ctl = TextEditingController();
+  final reason = TextEditingController();
+  String? err;
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (c) => StatefulBuilder(builder: (c, set) {
+      final p = Palette.of(c);
+      void save() {
+        final v = double.tryParse(ctl.text.replaceAll(',', '').trim());
+        if (v == null) return set(() => err = 'Enter the corrected balance.');
+        final d = round2(v - cb);
+        if (d.abs() > 0.004) {
+          (s.data['txns'] as List).add(<String, dynamic>{
+            'id': uid(), 'type': d > 0 ? 'income' : 'expense', 'kind': 'correction', 'accId': id, 'amount': d.abs(), 'date': today(), 'time': nowTime(),
+            'note': reason.text.trim().isEmpty ? 'Balance corrected' : reason.text.trim(), 'tags': <dynamic>[],
+          });
+          s.commit();
+        }
+        Navigator.pop(c);
+        toast(context, 'Balance corrected');
+      }
+
+      return Padding(
+        padding: EdgeInsets.fromLTRB(18, 0, 18, MediaQuery.of(c).viewInsets.bottom + 18),
+        child: SafeArea(
+          top: false,
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
+              const Expanded(child: Text('Correct Balance', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800))),
+              IconButton(tooltip: 'Save', icon: Icon(Icons.check_rounded, color: p.accent), onPressed: save),
+            ]),
+            const SizedBox(height: 8),
+            Text('Current Balance: ${cb.toStringAsFixed(2)}', style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 10),
+            TextField(
+              controller: ctl,
+              autofocus: true,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+              decoration: const InputDecoration(labelText: 'Corrected Balance', border: UnderlineInputBorder(), filled: false),
+            ),
+            const SizedBox(height: 10),
+            TextField(controller: reason, decoration: const InputDecoration(labelText: 'Reason for Correction (Optional)', border: UnderlineInputBorder(), filled: false)),
+            if (err != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(err!, style: TextStyle(color: p.neg))),
+            const SizedBox(height: 20),
+            Row(children: [
+              Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(c), child: const Text('Cancel'))),
+              const SizedBox(width: 10),
+              Expanded(child: FilledButton(onPressed: save, child: const Text('Save'))),
+            ]),
+          ]),
+        ),
+      );
+    }),
+  );
 }
 
 /// Add / edit a wallet: name, currency and current balance (same rules as the web app).

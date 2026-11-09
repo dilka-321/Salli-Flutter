@@ -174,6 +174,27 @@ extension Round5Ops on AppStore {
     commit();
   }
 
+  /// Close Loan / Manual Override → mark the loan as paid without recording a payment.
+  void settleLoan(String id, {String mode = 'manual'}) {
+    final l = loan(id);
+    if (l == null) return;
+    l['settled'] = true;
+    l['settledAt'] = today();
+    l['settleMode'] = mode;
+    commit();
+  }
+
+  /// Manual Override → set a custom remaining principal and mark the loan as active again.
+  void reopenLoan(String id, double remaining) {
+    final l = loan(id);
+    if (l == null) return;
+    l.remove('settled');
+    l.remove('settledAt');
+    l.remove('settleMode');
+    l['remainAdj'] = round2(loanTotal(l) - loanPaid(l) - remaining);
+    commit();
+  }
+
   /// Pay now: [v] in [cur]; money leaves [accId] (converted with the loan's agreed rate).
   void payLoan(String id, {required double v, required String cur, required double fee, required String accId, required String date, required String note}) {
     final l = loan(id)!;

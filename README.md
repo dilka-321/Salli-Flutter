@@ -10,7 +10,13 @@ This is the native rebuild of the Salli money manager. It signs in to **the same
 
 If a build turns red: open the failed step, copy the red error lines (or screenshot them) and send them to Claude to fix.
 
-## 2.0.1 — Correction 3 (this version)
+## 2.0.2 (this version)
+- **Transfer money:** From / To account are tappable boxes again (icon, name, currency · balance, ›) with the swap button between them. Tapping opens a "From Account" / "To Account" list of all accounts with balances and a ✓ on the selected one.
+- **Home → Spending Trend:** tapping or dragging now glides the cursor line, dots and tooltip smoothly to the new day.
+- **Loans → loan page ⋮:** new **Close loan** (Close without paying / Pay and complete from an account) and **Manual override** (Mark as Settled / Reopen with Custom Balance). A closed or settled loan shows PAID, moves to Paid Loans and is removed from liabilities. Saved on the loan as `settled` / `remainAdj` (the web app ignores these fields for now).
+- **Account page** (tap an account → Transactions): green header with the balance and the month's In / Out, month chips going back through your history, day groups with in / out totals, an empty state, a + button (Add Expense with this account already chosen) and a ⋮ menu: Edit Account, Create Account, Correct Balance, Set as Default Wallet, Delete Account.
+
+## 2.0.1 — Correction 3
 - **Transfers:** typing in "Amount received" or clearing the exchange rate no longer jumps the cursor to the amount box.
 - **Account selection everywhere** (lending, add / edit transaction, transfers, card payments, loans, goals, plans…) is now a sideways-scrolling row of account cards with the balance, like the web app.
 - **Privacy & lock:** with App Lock on, the app switcher (recents) shows the Salli cover instead of your details. When the lock time has passed, reopening shows the Salli lock screen with fingerprint / face unlock (or PIN) **above the page you were on** — after unlocking you're back exactly where you stopped.

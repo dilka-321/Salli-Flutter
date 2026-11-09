@@ -76,4 +76,16 @@ void main() {
     final nw = s.netWorthDetail();
     expect(nw.A, closeTo(120000 + 3600, .01));
   });
+
+  test('close / manual override: settle and reopen with a custom balance', () {
+    final id = s.saveLoan(name: 'Nipun', type: 'personal', lender: '', currency: 'LKR', principal: 1000, rate: 0, months: 0, start: today(), rates: {}, rateDir: {}, accId: 'lk');
+    final l = s.loan(id)!;
+    expect(s.loanRemain(l), 1000);
+    s.settleLoan(id, mode: 'closed');
+    expect(s.loanRemain(l), 0);
+    s.reopenLoan(id, 400);
+    expect(s.loanRemain(l), 400);
+    s.payLoan(id, v: 100, cur: 'LKR', fee: 0, accId: 'lk', date: today(), note: 'x');
+    expect(s.loanRemain(l), 300);
+  });
 }
