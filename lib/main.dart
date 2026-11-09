@@ -39,6 +39,7 @@ class SalliApp extends StatelessWidget {
         return MaterialApp(
           title: AppConfig.appName,
           debugShowCheckedModeBanner: false,
+          navigatorKey: rootNavKey,
           themeMode: mode,
           theme: buildTheme(Brightness.light, accentId),
           darkTheme: buildTheme(Brightness.dark, accentId),
@@ -51,7 +52,8 @@ class SalliApp extends StatelessWidget {
               ),
               child: MediaQuery(
                 data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(MediaQuery.of(context).textScaler.scale(14) / 14 * _fontScale(set))),
-                child: child ?? const SizedBox.shrink(),
+                // lock screen / privacy cover sit above every open page, so your place is kept underneath
+                child: KeyboardRefresher(child: LockGuard(child: child ?? const SizedBox.shrink())),
               ),
             );
           },
@@ -82,13 +84,13 @@ class _Root extends StatelessWidget {
       case Phase.conflict:
         page = const ConflictScreen();
       case Phase.ready:
-        page = s.needsUnlock ? const LockScreen() : const Shell();
+        page = const Shell();
     }
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 450),
       switchInCurve: Curves.easeOutCubic,
       transitionBuilder: (c, a) => FadeTransition(opacity: a, child: c),
-      child: KeyedSubtree(key: ValueKey('${s.phase}${s.needsUnlock}'), child: page),
+      child: KeyedSubtree(key: ValueKey(s.phase), child: page),
     );
   }
 }

@@ -5,6 +5,7 @@ import '../core/currency.dart';
 import '../core/ops.dart';
 import '../core/store.dart';
 import '../core/util.dart';
+import 'plans_common.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -247,6 +248,31 @@ class _TransferEditScreenState extends State<TransferEditScreen> {
     });
   }
 
+  void _setAcc(bool isFrom, String? id) {
+    if (id == null) return;
+    setState(() {
+      if ((isFrom ? from : to) != id) {
+        rateCtl.clear();
+        recvCtl.clear();
+        dir = null;
+      }
+      if (isFrom) {
+        from = id;
+      } else {
+        to = id;
+      }
+    });
+  }
+
+  Widget _accHead(Palette p, String label, String? sub) => Padding(
+        padding: const EdgeInsets.fromLTRB(4, 6, 4, 8),
+        child: Row(children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
+          const Spacer(),
+          if (sub != null) Text(sub, style: TextStyle(color: p.muted, fontSize: 12.5)),
+        ]),
+      );
+
   void _save() {
     final s = StoreScope.read(context);
     final v = _p(amt);
@@ -289,32 +315,11 @@ class _TransferEditScreenState extends State<TransferEditScreen> {
     final real = r > 0 ? round2(v * r) : 0.0;
     final diff = round2(real - appAmt);
 
-    Widget accBox(String label, J? a, bool isFrom) => GlassCard(
-          onTap: () => _pick(isFrom),
-          padding: const EdgeInsets.all(14),
-          child: Row(children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(color: p.accent.withOpacity(.14), borderRadius: BorderRadius.circular(12)),
-              child: Icon(a != null && s.isCard(a) ? Icons.credit_card_rounded : Icons.account_balance_wallet_rounded, color: p.accent),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(label, style: TextStyle(color: p.muted, fontSize: 12.5)),
-                Text(a == null ? 'Choose account' : '${a['name']}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15.5)),
-                if (a != null) Text('${a['currency']} · ${money(s.accBal(a), '${a['currency']}')}', style: TextStyle(color: p.muted, fontSize: 12.5)),
-              ]),
-            ),
-            Icon(Icons.chevron_right_rounded, color: p.muted),
-          ]),
-        );
-
     return Scaffold(
       appBar: AppBar(title: Text(editGroup != null ? 'Edit Transfer' : 'Transfer Between Accounts')),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 40), children: [
-        accBox('From account', fa, true),
+        _accHead(p, 'From account', fa == null ? null : '${fa['currency']} · ${money(s.accBal(fa), '${fa['currency']}')}'),
+        AccountChips(key: const ValueKey('fromAcc'), value: from, exclude: to, onChanged: (id) => _setAcc(true, id)),
         Center(
           child: IconButton(
             tooltip: 'Swap accounts',
@@ -329,9 +334,11 @@ class _TransferEditScreenState extends State<TransferEditScreen> {
             }),
           ),
         ),
-        accBox('To account', ta, false),
+        _accHead(p, 'To account', ta == null ? null : '${ta['currency']} · ${money(s.accBal(ta), '${ta['currency']}')}'),
+        AccountChips(key: const ValueKey('toAcc'), value: to, exclude: from, onChanged: (id) => _setAcc(false, id)),
         const SizedBox(height: 14),
         TextField(
+          key: const ValueKey('amtField'),
           controller: amt,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
@@ -340,14 +347,16 @@ class _TransferEditScreenState extends State<TransferEditScreen> {
             if (cx) _syncFromRate(fc, tc);
           }),
         ),
-        if (cx && r <= 0 && v > 0)
-          Padding(
-            padding: const EdgeInsets.only(top: 6, left: 4),
-            child: Text('≈ ${money(appAmt, tc)} at ${s.rates.rateOf(fc, tc).toStringAsFixed(4)}', style: TextStyle(color: p.pos, fontSize: 13)),
-          ),
+        // always present (empty when not needed) so the fields below keep their place and focus while typing
+        Padding(
+          key: const ValueKey('appRateHint'),
+          padding: EdgeInsets.only(top: cx && r <= 0 && v > 0 ? 6 : 0, left: 4),
+          child: cx && r <= 0 && v > 0 ? Text('≈ ${money(appAmt, tc)} at ${s.rates.rateOf(fc, tc).toStringAsFixed(4)}', style: TextStyle(color: p.pos, fontSize: 13)) : const SizedBox.shrink(),
+        ),
         if (cx) ...[
           const SizedBox(height: 14),
           GlassCard(
+            key: const ValueKey('fxCard'),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Text('Exchange rate (optional)', style: TextStyle(fontWeight: FontWeight.w700)),
               Text('Use the rate from your bank statement. It applies to this transfer only.', style: TextStyle(color: p.muted, fontSize: 12.5)),
@@ -365,6 +374,7 @@ class _TransferEditScreenState extends State<TransferEditScreen> {
                 const Text('  =  '),
                 Expanded(
                   child: TextField(
+                    key: const ValueKey('rateField'),
                     controller: rateCtl,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(hintText: appQ.toStringAsFixed(4), isDense: true),
@@ -376,6 +386,7 @@ class _TransferEditScreenState extends State<TransferEditScreen> {
               ]),
               const SizedBox(height: 12),
               TextField(
+                key: const ValueKey('recvField'),
                 controller: recvCtl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(labelText: 'Amount received in ${ta?['name'] ?? ''} ($tc)', hintText: v > 0 ? appAmt.toStringAsFixed(2) : '0.00'),
@@ -394,8 +405,9 @@ class _TransferEditScreenState extends State<TransferEditScreen> {
             ]),
           ),
         ],
-        const SizedBox(height: 14),
+        const SizedBox(height: 14, key: ValueKey('feeGap')),
         TextField(
+          key: const ValueKey('feeField'),
           controller: fee,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(labelText: 'Transfer fee (optional)', prefixText: '${currencySymbol(fc)} '),

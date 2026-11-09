@@ -10,7 +10,17 @@ This is the native rebuild of the Salli money manager. It signs in to **the same
 
 If a build turns red: open the failed step, copy the red error lines (or screenshot them) and send them to Claude to fix.
 
-## Round 7 (this version — all sections now native)
+## 2.0.1 — Correction 3 (this version)
+- **Transfers:** typing in "Amount received" or clearing the exchange rate no longer jumps the cursor to the amount box.
+- **Account selection everywhere** (lending, add / edit transaction, transfers, card payments, loans, goals, plans…) is now a sideways-scrolling row of account cards with the balance, like the web app.
+- **Privacy & lock:** with App Lock on, the app switcher (recents) shows the Salli cover instead of your details. When the lock time has passed, reopening shows the Salli lock screen with fingerprint / face unlock (or PIN) **above the page you were on** — after unlocking you're back exactly where you stopped.
+- **Keyboard fix:** after the keyboard closes the page is redrawn, so no part of the screen stays blank.
+- **Back button on Home** asks "Exit App? Do you really want to exit the app?" (other tabs go back to Home first).
+- **Home:** account tiles scroll sideways under My Accounts (tap to open the account), "Credit cards available" line; **Spending Trend** is now a line chart (Income, Expense, Cash In, Cash Out) with touch / drag tooltips and Monthly / Weekly; **Monthly Budgeting** cards.
+- **Financial Overview:** Share button opens the phone's share menu.
+- **Loan Analyzer** rebuilt: 3 steps (Loan Basics with loan type & typical rates, term in months or years, interest rate **or** monthly installment; Your Finances; Review & Analyze with processing fees) → **Loan Analysis** (status, EMI, end date, principal vs interest, Why? risk factors, total payment / interest, income breakdown, insights; Analysis tab with yearly → monthly amortization schedule and extra-payment savings) and **Compare Loans** (Loan A vs Loan B side by side).
+
+## Round 7 (all sections native)
 - **Reports → Share**: download or share the report as a **PDF** or an **Excel (.xlsx)** file (Save to phone or Share to Gmail / Drive / WhatsApp). Bank statements are included when switched on in Export settings.
 - **Backup & Restore**: Backup Now (save to phone or share), Restore Data from a backup file (same file format as the web app — backups move between both apps), Export all transactions to Excel, **Automatic backup** (daily / weekly / monthly copy kept on the phone) and **Also send to Gmail** (when due, Salli opens the share menu with the backup attached).
 - **App Lock**: 4-digit PIN (the same PIN works in the web app) and **Biometric Unlock** (fingerprint / face). Locks again after a minute in the background. "Forgot PIN?" turns the lock off after you enter your account password.

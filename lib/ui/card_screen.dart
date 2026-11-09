@@ -6,6 +6,7 @@ import '../core/ops.dart';
 import '../core/store.dart';
 import '../core/util.dart';
 import 'accounts_screen.dart';
+import 'plans_common.dart';
 import 'theme.dart';
 import 'transactions_screen.dart';
 import 'transfers_screen.dart';
@@ -147,10 +148,7 @@ void showCardPay(BuildContext context, J c) {
             const SizedBox(height: 12),
             Text('Pay from', style: TextStyle(color: p.muted)),
             const SizedBox(height: 6),
-            Wrap(spacing: 8, runSpacing: 8, children: [
-              for (final a in s.wallets)
-                ChoiceChip(label: Text('${a['name']} · ${a['currency']}'), selected: from == a['id'], onSelected: (_) => set(() => from = '${a['id']}')),
-            ]),
+            AccountChips(value: from, walletsOnly: true, onChanged: (v) => set(() => from = v ?? from)),
             if (from != null && s.accCur(from) != cur && (double.tryParse(amt.text) ?? 0) > 0)
               Padding(
                 padding: const EdgeInsets.only(top: 8),

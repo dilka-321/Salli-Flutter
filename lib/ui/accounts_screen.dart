@@ -287,3 +287,11 @@ void _addChooser(BuildContext context) {
     ),
   );
 }
+
+/// Public entry to one account's transactions (used by the Home account tiles).
+class AccountTxnsScreen extends StatelessWidget {
+  const AccountTxnsScreen({super.key, required this.accId});
+  final String accId;
+  @override
+  Widget build(BuildContext context) => _AccountTxns(accId: accId);
+}

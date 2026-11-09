@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../core/currency.dart';
+import '../core/store.dart';
 import '../core/util.dart';
 import 'accounts_screen.dart';
+import 'card_screen.dart';
 import 'due_soon.dart';
 import 'home_widgets.dart';
 import '../core/round6.dart';
@@ -110,33 +112,11 @@ class HomeScreen extends StatelessWidget {
                       ),
                     'accounts' => Padding(
                         padding: const EdgeInsets.only(bottom: 14),
-                        child: GlassCard(
-                onTap: () => Navigator.of(context).push(pageRoute(const AccountsScreen())),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    const Expanded(child: Text('My Accounts', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800))),
-                    Text('See all', style: TextStyle(color: p.accent, fontWeight: FontWeight.w600)),
-                  ]),
-                  const SizedBox(height: 10),
-                  Text('All Accounts Balance', style: TextStyle(color: p.muted, fontSize: 13)),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(money(s.totalBalance, s.base), style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: -.4)),
-                  ),
-                  const SizedBox(height: 10),
-                  for (final a in s.wallets.take(4))
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 5),
-                      child: Row(children: [
-                        Icon(Icons.account_balance_wallet_outlined, size: 18, color: p.muted),
-                        const SizedBox(width: 10),
-                        Expanded(child: Text('${a['name']}', overflow: TextOverflow.ellipsis)),
-                        Text(money(s.accBal(a), '${a['currency']}'), style: const TextStyle(fontWeight: FontWeight.w700)),
-                      ]),
-                    ),
-                ]),
-              ),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                          _accountsCard(context, s, p),
+                          const SizedBox(height: 12),
+                          _AccountTiles(),
+                        ]),
                       ),
                     'recent' => Padding(
                         padding: const EdgeInsets.only(bottom: 14),
@@ -158,6 +138,76 @@ class HomeScreen extends StatelessWidget {
             ]),
           ),
         ]),
+      ),
+    );
+  }
+}
+
+
+Widget _accountsCard(BuildContext context, AppStore s, Palette p) => GlassCard(
+                onTap: () => Navigator.of(context).push(pageRoute(const AccountsScreen())),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    const Expanded(child: Text('My Accounts', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800))),
+                    Text('See all', style: TextStyle(color: p.accent, fontWeight: FontWeight.w600)),
+                  ]),
+                  const SizedBox(height: 10),
+                  Text('All Accounts Balance', style: TextStyle(color: p.muted, fontSize: 13)),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(money(s.totalBalance, s.base), style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: -.4)),
+                  ),
+                  if (s.cards.isNotEmpty) ...[
+                    Divider(height: 22, color: p.line),
+                    Row(children: [
+                      Icon(Icons.credit_card_rounded, size: 18, color: p.muted),
+                      const SizedBox(width: 10),
+                      Expanded(child: Text('Credit cards available', style: TextStyle(color: p.muted))),
+                      Text(money(s.cards.fold(0.0, (a, c) => a + s.conv(s.accBal(c), '${c['currency']}', s.base)), s.base), style: const TextStyle(fontWeight: FontWeight.w700)),
+                    ]),
+                  ],
+                ]),
+              );
+
+/// Horizontally scrolling account tiles under My Accounts (tap to see that account's transactions).
+class _AccountTiles extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final s = StoreScope.of(context);
+    final p = Palette.of(context);
+    final L = s.accounts.where((a) => a['include'] != false || s.isCard(a)).toList();
+    if (L.isEmpty) return const SizedBox.shrink();
+    return SizedBox(
+      height: 112,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: L.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (_, i) {
+          final a = L[i];
+          final bal = s.accBal(a);
+          final neg = bal < 0;
+          final card = s.isCard(a);
+          return GestureDetector(
+            onTap: () => Navigator.of(context).push(pageRoute(card ? CardScreen(id: '${a['id']}') : AccountTxnsScreen(accId: '${a['id']}'))),
+            child: Container(
+              width: 128,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: p.card, borderRadius: BorderRadius.circular(18), border: Border.all(color: neg ? p.warn.withOpacity(.7) : p.line)),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Container(width: 34, height: 34, decoration: BoxDecoration(color: p.fg.withOpacity(.07), borderRadius: BorderRadius.circular(10)), child: Icon(card ? Icons.credit_card_rounded : Icons.account_balance_wallet_outlined, size: 19, color: p.muted)),
+                const Spacer(),
+                Row(children: [
+                  if (neg) ...[Icon(Icons.warning_amber_rounded, size: 13, color: p.warn), const SizedBox(width: 3)],
+                  Expanded(child: Text('${a['name']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: p.muted, fontSize: 12.5))),
+                ]),
+                const SizedBox(height: 2),
+                FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(money(bal, '${a['currency']}'), style: TextStyle(fontWeight: FontWeight.w800, color: neg ? p.neg : null))),
+              ]),
+            ),
+          );
+        },
       ),
     );
   }

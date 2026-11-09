@@ -12,6 +12,7 @@ import 'categories_screen.dart';
 import 'goals_screens.dart';
 import 'installments_screens.dart';
 import 'lendings_screens.dart';
+import 'loan_analyzer.dart';
 import 'loans_screens.dart';
 import 'monthly_plan_screens.dart';
 import 'ot_screens.dart';

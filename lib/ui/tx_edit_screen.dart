@@ -7,6 +7,7 @@ import '../core/round6.dart';
 import '../core/store.dart';
 import '../core/util.dart';
 import 'categories_screen.dart';
+import 'plans_common.dart';
 import 'productivity_screens.dart';
 import 'theme.dart';
 import 'widgets.dart';
@@ -175,15 +176,7 @@ class _TxEditScreenState extends State<TxEditScreen> {
           ActionChip(avatar: const Icon(Icons.add_rounded, size: 18), label: const Text('New'), onPressed: () => showCategorySheet(context, kind: type)),
         ]),
         const SectionTitle('Account'),
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          for (final a in s.accounts)
-            ChoiceChip(
-              label: Text('${a['name']} · ${a['currency']}'),
-              avatar: Icon(s.isCard(a) ? Icons.credit_card_rounded : Icons.account_balance_wallet_outlined, size: 18),
-              selected: accId == a['id'],
-              onSelected: (_) => setState(() => accId = '${a['id']}'),
-            ),
-        ]),
+        AccountChips(value: accId, onChanged: (v) => setState(() => accId = v ?? accId)),
         const SectionTitle('Date & time'),
         Row(children: [
           Expanded(

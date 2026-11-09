@@ -103,7 +103,32 @@ class _ShellState extends State<Shell> {
       const AnalyticsTab(),
       const ReportsTab(),
     ];
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        if (Shell.scaffoldKey.currentState?.isDrawerOpen == true) {
+          Shell.scaffoldKey.currentState?.closeDrawer();
+          return;
+        }
+        if (tab != 0) {
+          setState(() => tab = 0);
+          return;
+        }
+        final exit = await showDialog<bool>(
+          context: context,
+          builder: (c) => AlertDialog(
+            title: const Text('Exit App'),
+            content: const Text('Do you really want to exit the app?'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
+              TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Exit')),
+            ],
+          ),
+        );
+        if (exit == true) SystemNavigator.pop();
+      },
+      child: Scaffold(
       key: Shell.scaffoldKey,
       drawer: const SideMenu(),
       drawerEdgeDragWidth: tab == 0 ? 28 : 0,
@@ -159,6 +184,7 @@ class _ShellState extends State<Shell> {
           ),
         ),
       ),
+    ),
     );
   }
 

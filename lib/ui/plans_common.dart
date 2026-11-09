@@ -49,27 +49,98 @@ class AmountBox extends StatelessWidget {
   }
 }
 
-/// Account choice chips. [walletsOnly] hides credit cards (used where the web app shows wallet cards only).
+/// Account selector — horizontally scrolling cards with name and balance (same style everywhere).
+/// [walletsOnly] hides credit cards (used where the web app shows wallet cards only).
 class AccountChips extends StatelessWidget {
-  const AccountChips({super.key, required this.value, required this.onChanged, this.walletsOnly = false, this.allowNone = false});
+  const AccountChips({super.key, required this.value, required this.onChanged, this.walletsOnly = false, this.allowNone = false, this.exclude});
   final String? value;
   final ValueChanged<String?> onChanged;
   final bool walletsOnly, allowNone;
+  final String? exclude;
   @override
   Widget build(BuildContext context) {
     final s = StoreScope.of(context);
-    final list = walletsOnly ? s.wallets : s.accounts;
+    final list = (walletsOnly ? s.wallets : s.accounts).where((a) => a['id'] != exclude).toList();
     if (list.isEmpty) return Text('Create an account first', style: TextStyle(color: Palette.of(context).muted));
-    return Wrap(spacing: 8, runSpacing: 8, children: [
-      if (allowNone) ChoiceChip(label: const Text('None'), selected: value == null, onSelected: (_) => onChanged(null)),
-      for (final a in list)
-        ChoiceChip(
-          label: Text('${a['name']} · ${a['currency']}'),
-          avatar: Icon(s.isCard(a) ? Icons.credit_card_rounded : Icons.account_balance_wallet_outlined, size: 18),
-          selected: value == a['id'],
-          onSelected: (_) => onChanged('${a['id']}'),
-        ),
-    ]);
+    return AccountCardsRow(
+      items: [
+        if (allowNone) (id: null, name: 'None', sub: 'No account', neg: false),
+        for (final a in list) (id: '${a['id']}', name: '${a['name']}', sub: money(s.accBal(a), '${a['currency']}'), neg: s.accBal(a) < 0),
+      ],
+      value: value,
+      onChanged: onChanged,
+    );
+  }
+}
+
+class AccountCardsRow extends StatefulWidget {
+  const AccountCardsRow({super.key, required this.items, required this.value, required this.onChanged});
+  final List<({String? id, String name, String sub, bool neg})> items;
+  final String? value;
+  final ValueChanged<String?> onChanged;
+  @override
+  State<AccountCardsRow> createState() => _AccountCardsRowState();
+}
+
+class _AccountCardsRowState extends State<AccountCardsRow> {
+  final _sc = ScrollController();
+  static const _w = 150.0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final i = widget.items.indexWhere((x) => x.id == widget.value);
+      if (i > 1 && _sc.hasClients) _sc.jumpTo(((i - 1) * (_w + 10)).clamp(0, _sc.position.maxScrollExtent).toDouble());
+    });
+  }
+
+  @override
+  void dispose() {
+    _sc.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Palette.of(context);
+    return SizedBox(
+      height: 78,
+      child: ListView.separated(
+        controller: _sc,
+        scrollDirection: Axis.horizontal,
+        itemCount: widget.items.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (_, i) {
+          final x = widget.items[i];
+          final on = x.id == widget.value;
+          return GestureDetector(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              widget.onChanged(x.id);
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: _w,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: on ? p.accent.withOpacity(.14) : p.card,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: on ? p.accent : p.line, width: on ? 1.6 : 1),
+              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+                Row(children: [
+                  Flexible(child: Text(x.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: FontWeight.w800, color: on ? p.accent : null))),
+                  if (on) ...[const SizedBox(width: 4), Icon(Icons.check_rounded, size: 18, color: p.accent)],
+                ]),
+                const SizedBox(height: 4),
+                Text(x.sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: x.neg ? p.neg : p.muted, fontSize: 13)),
+              ]),
+            ),
+          );
+        },
+      ),
+    );
   }
 }
 

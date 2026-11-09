@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../core/loans.dart';
 import '../core/store.dart';
@@ -75,11 +76,15 @@ class OverviewScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Financial Overview'), actions: [
         IconButton(
-          tooltip: 'Copy summary',
-          icon: const Icon(Icons.copy_rounded),
-          onPressed: () {
-            Clipboard.setData(ClipboardData(text: text));
-            toast(context, 'Summary copied — paste it anywhere to share');
+          tooltip: 'Share',
+          icon: const Icon(Icons.ios_share_rounded),
+          onPressed: () async {
+            try {
+              await SharePlus.instance.share(ShareParams(text: text, subject: 'Financial Overview'));
+            } catch (_) {
+              Clipboard.setData(ClipboardData(text: text));
+              if (context.mounted) toast(context, 'Summary copied — paste it anywhere to share');
+            }
           },
         ),
       ]),

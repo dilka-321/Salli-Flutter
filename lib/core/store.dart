@@ -33,6 +33,10 @@ class AppStore extends ChangeNotifier with WidgetsBindingObserver {
   // ---- app lock (PIN / biometric): locked again after a minute in the background
   bool unlocked = false;
   DateTime? _bgAt;
+
+  /// true while the app is in the background / app switcher, so the recents preview shows the Salli cover instead of your data
+  bool obscured = false;
+  bool get _pinOn => data['settings'] is Map && '${(data['settings'] as Map)['pin'] ?? ''}'.isNotEmpty;
   bool get needsUnlock => phase == Phase.ready && data['settings'] is Map && '${(data['settings'] as Map)['pin'] ?? ''}'.isNotEmpty && !unlocked;
   void unlock() {
     unlocked = true;
@@ -73,6 +77,11 @@ class AppStore extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    final hide = state != AppLifecycleState.resumed && state != AppLifecycleState.detached && phase == Phase.ready && _pinOn;
+    if (hide != obscured && (hide || state == AppLifecycleState.resumed)) {
+      obscured = hide;
+      notifyListeners();
+    }
     if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) _bgAt ??= DateTime.now();
     if (state == AppLifecycleState.resumed) {
       final away = _bgAt == null ? Duration.zero : DateTime.now().difference(_bgAt!);
