@@ -42,6 +42,49 @@ jobs:
             cat "$F"
           fi
 
+      - name: Phone notifications support
+        run: |
+          python3 - <<'PY'
+          import glob, re
+          # 1) desugaring (needed by flutter_local_notifications)
+          for g in glob.glob('android/app/build.gradle*'):
+              t = open(g).read()
+              kts = g.endswith('.kts')
+              if 'oreLibraryDesugaring' not in t:
+                  flag = 'isCoreLibraryDesugaringEnabled = true' if kts else 'coreLibraryDesugaringEnabled true'
+                  t = re.sub(r'compileOptions\s*\{', 'compileOptions {\n        ' + flag, t, count=1)
+                  dep = 'coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")' if kts else "coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'"
+                  t += '\ndependencies {\n    ' + dep + '\n}\n'
+                  open(g, 'w').write(t)
+              print(open(g).read())
+          # 2) receivers so scheduled reminders still arrive after a restart
+          m = 'android/app/src/main/AndroidManifest.xml'
+          t = open(m).read()
+          if 'ScheduledNotificationReceiver' not in t:
+              rec = ('<receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />\n'
+                     '        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">\n'
+                     '            <intent-filter>\n'
+                     '                <action android:name="android.intent.action.BOOT_COMPLETED"/>\n'
+                     '                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>\n'
+                     '                <action android:name="android.intent.action.QUICKBOOT_POWERON" />\n'
+                     '                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>\n'
+                     '            </intent-filter>\n'
+                     '        </receiver>\n    </application>')
+              t = t.replace('</application>', rec, 1)
+          for perm in ['android.permission.POST_NOTIFICATIONS', 'android.permission.RECEIVE_BOOT_COMPLETED']:
+              if perm not in t:
+                  t = t.replace('<application', '<uses-permission android:name="%s" />\n    <application' % perm, 1)
+          open(m, 'w').write(t)
+          print(t)
+          PY
+
+      - name: Plugin Java/Kotlin version fix
+        run: |
+          G=android/gradle.properties
+          touch $G
+          grep -q 'kotlin.jvm.target.validation.mode' $G || echo 'kotlin.jvm.target.validation.mode=warning' >> $G
+          cat $G
+
       - run: flutter pub get
 
       - name: Code check (report only)
