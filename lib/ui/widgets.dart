@@ -68,9 +68,9 @@ class _GlassCardState extends State<GlassCard> {
     // premium feel: cards ease in when they first appear and sink a little while pressed
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 420),
+      duration: const Duration(milliseconds: 260),
       curve: Curves.easeOutCubic,
-      builder: (_, t, ch) => Opacity(opacity: t, child: Transform.translate(offset: Offset(0, (1 - t) * 16), child: ch)),
+      builder: (_, t, ch) => Opacity(opacity: t, child: Transform.translate(offset: Offset(0, (1 - t) * 10), child: ch)),
       child: AnimatedScale(scale: _down ? .975 : 1, duration: const Duration(milliseconds: 140), curve: Curves.easeOut, child: box),
     );
   }
@@ -229,24 +229,23 @@ void toast(BuildContext c, String msg) {
     ..showSnackBar(SnackBar(content: Text(msg), duration: const Duration(seconds: 2)));
 }
 
-/// Smooth slide-fade-and-scale route used for every page (the page underneath eases back).
+/// Fast, smooth slide-and-fade route used for every page (the page underneath glides back a little).
 Route<T> pageRoute<T>(Widget page) => PageRouteBuilder<T>(
-      transitionDuration: const Duration(milliseconds: 460),
-      reverseTransitionDuration: const Duration(milliseconds: 360),
+      transitionDuration: const Duration(milliseconds: 300),
+      reverseTransitionDuration: const Duration(milliseconds: 250),
       pageBuilder: (_, __, ___) => page,
       transitionsBuilder: (_, a, sa, child) {
-        final curve = CurvedAnimation(parent: a, curve: Curves.easeOutQuart, reverseCurve: Curves.easeInCubic);
-        final out = CurvedAnimation(parent: sa, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
+        final move = CurvedAnimation(parent: a, curve: Curves.fastOutSlowIn, reverseCurve: Curves.easeInCubic);
+        // fade only during the first part so the page is fully solid sooner (less work for the GPU)
+        final fade = CurvedAnimation(parent: a, curve: const Interval(0, .55, curve: Curves.easeOut), reverseCurve: const Interval(.3, 1, curve: Curves.easeIn));
+        final back = CurvedAnimation(parent: sa, curve: Curves.fastOutSlowIn, reverseCurve: Curves.easeInCubic);
         return SlideTransition(
-          position: Tween(begin: const Offset(.10, 0), end: Offset.zero).animate(curve),
+          position: Tween(begin: const Offset(.18, 0), end: Offset.zero).animate(move),
           child: FadeTransition(
-            opacity: curve,
-            child: ScaleTransition(
-              scale: Tween(begin: .97, end: 1.0).animate(curve),
-              child: SlideTransition(
-                position: Tween(begin: Offset.zero, end: const Offset(-.06, 0)).animate(out),
-                child: ScaleTransition(scale: Tween(begin: 1.0, end: .96).animate(out), child: child),
-              ),
+            opacity: fade,
+            child: SlideTransition(
+              position: Tween(begin: Offset.zero, end: const Offset(-.08, 0)).animate(back),
+              child: RepaintBoundary(child: child),
             ),
           ),
         );

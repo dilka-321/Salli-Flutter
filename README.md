@@ -10,7 +10,10 @@ This is the native rebuild of the Salli money manager. It signs in to **the same
 
 If a build turns red: open the failed step, copy the red error lines (or screenshot them) and send them to Claude to fix.
 
-## 2.0.4 (this version)
+## 2.0.5 (this version)
+- **Faster, smoother page changes:** opening and closing pages now takes 0.3 s (was about 0.45 s) with a lighter slide-and-fade; cards settle in quicker too.
+
+## 2.0.4
 - **Add Expense / Income:** fixed the "Select Category" title showing one letter per line; the amount now types cleanly (no doubled / blurry numbers) and only the newest digit glides in.
 
 ## 2.0.3
