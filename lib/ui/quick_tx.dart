@@ -38,6 +38,7 @@ class _QuickTxScreenState extends State<QuickTxScreen> {
   bool back = false; // animation direction
   String? catId, accId, planId, receipt;
   String expr = '';
+  int _prevLen = 0;
   late String date, time;
   final tags = <String>[];
   final note = TextEditingController();
@@ -167,7 +168,10 @@ class _QuickTxScreenState extends State<QuickTxScreen> {
       if (last.replaceAll('.', '').length >= 12) return;
       e += k;
     }
-    setState(() => expr = e);
+    setState(() {
+      _prevLen = expr.length;
+      expr = e;
+    });
   }
 
   // ------------------------------------------------------------------ save
@@ -364,12 +368,7 @@ class _QuickTxScreenState extends State<QuickTxScreen> {
             Text('Choose a category for this transaction', style: TextStyle(color: p.muted, fontSize: 12)),
           ]),
         ),
-        FilledButton.icon(
-          style: FilledButton.styleFrom(shape: const StadiumBorder(), padding: const EdgeInsets.symmetric(horizontal: 18)),
-          icon: const Icon(Icons.add_rounded, size: 18),
-          label: const Text('Create'),
-          onPressed: () => showCategorySheet(context, kind: type),
-        ),
+        _PillButton(label: 'Create', filled: true, onTap: () => showCategorySheet(context, kind: type)),
       ]),
       const SizedBox(height: 14),
       TextField(
@@ -451,12 +450,7 @@ class _QuickTxScreenState extends State<QuickTxScreen> {
               child: ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(16, 0, 16, 20), children: [
                 Row(children: [
                   const Expanded(child: Text('Select a subcategory', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600))),
-                  FilledButton.tonalIcon(
-                    style: FilledButton.styleFrom(shape: const StadiumBorder()),
-                    icon: const Icon(Icons.add_rounded, size: 18),
-                    label: const Text('Create Subcategory'),
-                    onPressed: () => showCategorySheet(c, kind: type, parent: '${main['id']}'),
-                  ),
+                  _PillButton(label: 'Create Subcategory', filled: false, onTap: () => showCategorySheet(c, kind: type, parent: '${main['id']}')),
                 ]),
                 const SizedBox(height: 6),
                 Text('Select a subcategory or choose the main category below.', style: TextStyle(color: p.muted, fontSize: 12)),
@@ -535,11 +529,7 @@ class _QuickTxScreenState extends State<QuickTxScreen> {
                 child: Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
                   Text(currencySymbol(cur), style: TextStyle(fontSize: 17, color: p.muted, fontWeight: FontWeight.w700)),
                   const SizedBox(width: 6),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 160),
-                    transitionBuilder: (ch, a) => FadeTransition(opacity: a, child: ScaleTransition(scale: Tween(begin: .92, end: 1.0).animate(a), child: ch)),
-                    child: Text(expr.isEmpty ? '0' : expr, key: ValueKey(expr), style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w800, fontFeatures: [FontFeature.tabularFigures()])),
-                  ),
+                  _AmountText(expr: expr, grew: expr.length > _prevLen),
                 ]),
               ),
             ),
@@ -1064,4 +1054,60 @@ class _Appear extends StatelessWidget {
         builder: (_, t, ch) => Opacity(opacity: t, child: Transform.translate(offset: Offset(0, (1 - t) * 14), child: ch)),
         child: child,
       );
+}
+
+/// Small rounded "+ label" button with its own fixed size (never stretches across the row).
+class _PillButton extends StatelessWidget {
+  const _PillButton({required this.label, required this.onTap, this.filled = true});
+  final String label;
+  final VoidCallback onTap;
+  final bool filled;
+  @override
+  Widget build(BuildContext context) {
+    final p = Palette.of(context);
+    final fg = filled ? p.accentInk : p.accent;
+    return _Pressable(
+      onTap: onTap,
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: filled ? p.accent : p.accent.withOpacity(.14),
+          borderRadius: BorderRadius.circular(99),
+          boxShadow: filled ? [BoxShadow(color: p.accent.withOpacity(.35), blurRadius: 12, offset: const Offset(0, 4))] : null,
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.add_rounded, size: 18, color: fg),
+          const SizedBox(width: 6),
+          Text(label, style: TextStyle(color: fg, fontSize: 13.5, fontWeight: FontWeight.w700)),
+        ]),
+      ),
+    );
+  }
+}
+
+/// The typed amount, drawn once (never two copies on top of each other).
+/// Only the digit just typed glides up into place.
+class _AmountText extends StatelessWidget {
+  const _AmountText({required this.expr, required this.grew});
+  final String expr;
+  final bool grew;
+  static const _st = TextStyle(fontSize: 34, fontWeight: FontWeight.w800, fontFeatures: [FontFeature.tabularFigures()]);
+  @override
+  Widget build(BuildContext context) {
+    if (expr.isEmpty) return const Text('0', style: _st);
+    if (!grew) return Text(expr, style: _st);
+    final head = expr.substring(0, expr.length - 1), last = expr.substring(expr.length - 1);
+    return Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
+      if (head.isNotEmpty) Text(head, style: _st),
+      TweenAnimationBuilder<double>(
+        key: ValueKey('${expr.length}$expr'),
+        tween: Tween(begin: 0, end: 1),
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOutCubic,
+        builder: (_, t, ch) => Opacity(opacity: t, child: Transform.translate(offset: Offset(0, (1 - t) * 10), child: ch)),
+        child: Text(last, style: _st),
+      ),
+    ]);
+  }
 }

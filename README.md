@@ -10,7 +10,10 @@ This is the native rebuild of the Salli money manager. It signs in to **the same
 
 If a build turns red: open the failed step, copy the red error lines (or screenshot them) and send them to Claude to fix.
 
-## 2.0.3 (this version)
+## 2.0.4 (this version)
+- **Add Expense / Income:** fixed the "Select Category" title showing one letter per line; the amount now types cleanly (no doubled / blurry numbers) and only the newest digit glides in.
+
+## 2.0.3
 - **Add Expense / Add Income** works like the web app now: **Select Category** (search, Frequently Used, all categories in a grid, subcategory picker, Create) → **Select Account + calculator** (7 8 9 ÷ … C 0 ⌫ + . =) with **Quick Save** or **Add More Details** → **Add Note, Tags, Receipt, or Date** (date & time, spending plan, tags, conversion rate for foreign-currency accounts, note, receipt photo) → **Save**. Editing a saved transaction, SMS drafts and spending-plan "Add transaction" still use the existing form.
 - **Lendings:** new **Lending taken date** on New / Edit Lending; the lending and its "lend" transaction use that date.
 - **Budget:** removed the empty gap at the top of the page.
