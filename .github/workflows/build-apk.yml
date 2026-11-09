@@ -78,6 +78,36 @@ jobs:
           print(t)
           PY
 
+      - name: Compile every plugin against Android 36
+        run: |
+          cat > android/fix_sdk.gradle <<'GR'
+          subprojects { p ->
+              def fix = {
+                  try {
+                      if (p.plugins.hasPlugin('com.android.library')) {
+                          p.android.compileSdk = 36
+                          println "compileSdk 36 -> ${p.name}"
+                      }
+                  } catch (e) {
+                      println "compileSdk fix skipped for ${p.name}: ${e.message}"
+                  }
+              }
+              if (p.state.executed) { fix() } else { p.afterEvaluate { fix() } }
+          }
+          GR
+          python3 - <<'PY'
+          import glob
+          for g in glob.glob('android/build.gradle*'):
+              t = open(g).read()
+              if 'fix_sdk.gradle' in t:
+                  continue
+              line = 'apply(from = "fix_sdk.gradle")\n' if g.endswith('.kts') else "apply from: 'fix_sdk.gradle'\n"
+              i = t.find('subprojects')
+              t = t[:i] + line + t[i:] if i >= 0 else t + '\n' + line
+              open(g, 'w').write(t)
+              print(t)
+          PY
+
       - name: Plugin Java/Kotlin version fix
         run: |
           G=android/gradle.properties
