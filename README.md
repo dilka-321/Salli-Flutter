@@ -10,7 +10,15 @@ This is the native rebuild of the Salli money manager. It signs in to **the same
 
 If a build turns red: open the failed step, copy the red error lines (or screenshot them) and send them to Claude to fix.
 
-## 2.0.2 (this version)
+## 2.0.3 (this version)
+- **Add Expense / Add Income** works like the web app now: **Select Category** (search, Frequently Used, all categories in a grid, subcategory picker, Create) → **Select Account + calculator** (7 8 9 ÷ … C 0 ⌫ + . =) with **Quick Save** or **Add More Details** → **Add Note, Tags, Receipt, or Date** (date & time, spending plan, tags, conversion rate for foreign-currency accounts, note, receipt photo) → **Save**. Editing a saved transaction, SMS drafts and spending-plan "Add transaction" still use the existing form.
+- **Lendings:** new **Lending taken date** on New / Edit Lending; the lending and its "lend" transaction use that date.
+- **Budget:** removed the empty gap at the top of the page.
+- **Smoother animations:** cards ease in and sink slightly when tapped, page changes slide, fade and scale, and the new add flow animates between steps.
+- **Phone notifications:** due reminders (loans, lendings, subscriptions, installments, recurring, cards, budgets, to-dos, SMS drafts) now also appear in the phone's notification panel. They're sent when the app opens or comes back, and upcoming dues are scheduled for 9:00 AM on the due day even if the app is closed. Android asks once for permission — tap **Allow**.
+- **Build file:** `.github/workflows/build-apk.yml` has a new "Phone notifications support" step — replace it too.
+
+## 2.0.2
 - **Transfer money:** From / To account are tappable boxes again (icon, name, currency · balance, ›) with the swap button between them. Tapping opens a "From Account" / "To Account" list of all accounts with balances and a ✓ on the selected one.
 - **Home → Spending Trend:** tapping or dragging now glides the cursor line, dots and tooltip smoothly to the new day.
 - **Loans → loan page ⋮:** new **Close loan** (Close without paying / Pay and complete from an account) and **Manual override** (Mark as Settled / Reopen with Custom Balance). A closed or settled loan shows PAID, moves to Paid Loans and is removed from liabilities. Saved on the loan as `settled` / `remainAdj` (the web app ignores these fields for now).

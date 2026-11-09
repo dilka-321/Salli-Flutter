@@ -66,6 +66,14 @@ void main() {
     expect(s.txns, isEmpty);
   });
 
+  test('lending taken date sets the lending and its transaction date', () {
+    final id = s.saveLending(name: 'Kamal', currency: 'LKR', amount: 1000, accId: 'lk', due: '2026-12-01', note: '', taken: '2026-10-05');
+    expect(s.lending(id)!['created'], '2026-10-05');
+    expect(s.txns.single['date'], '2026-10-05');
+    s.saveLending(id: id, name: 'Kamal', currency: 'LKR', amount: 1000, accId: 'lk', due: '2026-12-01', note: '', taken: '2026-10-07');
+    expect(s.txns.single['date'], '2026-10-07');
+  });
+
   test('fixed deposit posts monthly interest once', () {
     final types = s.assetTypes;
     final fdType = types.firstWhere((t) => t['fd'] == true);

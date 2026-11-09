@@ -8,7 +8,7 @@ import '../core/util.dart';
 import 'theme.dart';
 import 'card_screen.dart';
 import 'transactions_screen.dart';
-import 'tx_edit_screen.dart';
+import 'quick_tx.dart';
 import 'transfers_screen.dart';
 import 'widgets.dart';
 
@@ -426,7 +426,7 @@ class _AccountTxnsState extends State<_AccountTxns> {
         backgroundColor: p.accent,
         foregroundColor: p.accentInk,
         shape: const CircleBorder(),
-        onPressed: () => Navigator.of(context).push(pageRoute(TxEditScreen(type: 'expense', draft: <String, dynamic>{'accId': widget.accId}))),
+        onPressed: () => Navigator.of(context).push(pageRoute(QuickTxScreen(type: 'expense', accId: widget.accId))),
         child: const Icon(Icons.add_rounded, size: 30),
       ),
       body: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

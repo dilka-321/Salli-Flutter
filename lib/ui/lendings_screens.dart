@@ -269,6 +269,7 @@ class _LendingFormScreenState extends State<LendingFormScreen> {
   late String currency;
   String? accId;
   String due = addMonths(today(), 1);
+  String taken = today();
   String? err;
   bool _init = false;
 
@@ -288,6 +289,7 @@ class _LendingFormScreenState extends State<LendingFormScreen> {
       currency = s.lcur(x);
       accId = gt?['accId']?.toString() ?? x['accId']?.toString() ?? s.defaultAccId;
       due = '${x['due'] ?? addMonths(today(), 1)}';
+      taken = '${gt?['date'] ?? x['created'] ?? today()}';
       note.text = '${x['note'] ?? ''}';
     }
   }
@@ -313,7 +315,7 @@ class _LendingFormScreenState extends State<LendingFormScreen> {
     }
     if (e != null) return setState(() => err = e);
     final isNew = widget.existing == null;
-    final id = s.saveLending(id: widget.existing?['id']?.toString(), name: name.text.trim(), currency: currency, amount: v, accId: accId!, due: due, note: note.text);
+    final id = s.saveLending(id: widget.existing?['id']?.toString(), name: name.text.trim(), currency: currency, amount: v, accId: accId!, due: due, note: note.text, taken: taken);
     HapticFeedback.lightImpact();
     final nav = Navigator.of(context);
     nav.pop();
@@ -354,6 +356,8 @@ class _LendingFormScreenState extends State<LendingFormScreen> {
             padding: const EdgeInsets.only(top: 6),
             child: Text('${money(s.conv(v, currency, ac), ac)} will be taken from ${s.accName(accId)} (1 $currency = ${s.rates.rateOf(currency, ac).toStringAsFixed(4)} $ac).', style: TextStyle(color: p.muted, fontSize: 12.5)),
           ),
+        const SizedBox(height: 12),
+        DateButton(value: taken, label: 'Lending taken date', onChanged: (v) => setState(() => taken = v)),
         const SizedBox(height: 12),
         DateButton(value: due, label: 'Due date', onChanged: (v) => setState(() => due = v)),
         const SizedBox(height: 12),

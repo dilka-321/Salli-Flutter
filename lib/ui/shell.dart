@@ -6,7 +6,9 @@ import 'package:flutter/services.dart';
 import 'budget_screens.dart';
 import 'card_screen.dart';
 import 'due_soon.dart';
+import 'phone_notify.dart';
 import 'productivity_screens.dart';
+import 'quick_tx.dart';
 import 'settings_screen.dart';
 import 'sms_admin_screens.dart';
 import '../core/round7.dart';
@@ -16,7 +18,6 @@ import 'home_screen.dart';
 import 'side_menu.dart';
 import 'theme.dart';
 import 'transfers_screen.dart';
-import 'tx_edit_screen.dart';
 import 'widgets.dart';
 
 /// Bottom bar: Home · Budget · (+) · Analytics · Reports — same layout as the web app.
@@ -50,6 +51,7 @@ class _ShellState extends State<Shell> {
       if (!mounted) return;
       final s = StoreScope.read(context);
       s.refreshLiveRates();
+      PhoneNotify.I.start(s);
       await runAutoBackup(context);
     });
   }
@@ -91,7 +93,7 @@ class _ShellState extends State<Shell> {
 
   void _open(BuildContext sheet, String type) {
     Navigator.pop(sheet);
-    Navigator.of(context).push(pageRoute(TxEditScreen(type: type)));
+    Navigator.of(context).push(pageRoute(QuickTxScreen(type: type)));
   }
 
   @override

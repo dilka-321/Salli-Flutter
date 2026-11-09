@@ -23,8 +23,9 @@ class BudgetTab extends StatelessWidget {
     final sp = L.fold(0.0, (a, b) => a + s.budgetSpent(b));
     return Scaffold(
       body: CustomScrollView(slivers: [
-        SliverAppBar.large(
-          title: const Text('Budget'),
+        SliverAppBar(
+          pinned: true,
+          title: const Text('Budget', style: TextStyle(fontWeight: FontWeight.w800)),
           actions: [
             IconButton(tooltip: 'Create budget', icon: const Icon(Icons.add_circle_outline_rounded), onPressed: () => Navigator.of(context).push(pageRoute(const BudgetEditScreen()))),
           ],

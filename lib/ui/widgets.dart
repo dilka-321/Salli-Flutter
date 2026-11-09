@@ -13,7 +13,7 @@ class StoreScope extends InheritedNotifier<AppStore> {
   static AppStore read(BuildContext c) => c.getInheritedWidgetOfExactType<StoreScope>()!.notifier!;
 }
 
-class GlassCard extends StatelessWidget {
+class GlassCard extends StatefulWidget {
   const GlassCard({super.key, required this.child, this.padding = const EdgeInsets.all(18), this.onTap, this.gradient, this.margin});
   final Widget child;
   final EdgeInsets padding;
@@ -22,14 +22,26 @@ class GlassCard extends StatelessWidget {
   final Gradient? gradient;
 
   @override
+  State<GlassCard> createState() => _GlassCardState();
+}
+
+class _GlassCardState extends State<GlassCard> {
+  bool _down = false;
+
+  void _press(bool v) {
+    if (widget.onTap != null && _down != v) setState(() => _down = v);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final p = Palette.of(context);
     final dark = Theme.of(context).brightness == Brightness.dark;
+    final onTap = widget.onTap;
     final box = Container(
-      margin: margin,
+      margin: widget.margin,
       decoration: BoxDecoration(
-        color: gradient == null ? p.card : null,
-        gradient: gradient,
+        color: widget.gradient == null ? p.card : null,
+        gradient: widget.gradient,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: p.line),
         boxShadow: [
@@ -40,17 +52,27 @@ class GlassCard extends StatelessWidget {
         type: MaterialType.transparency,
         child: InkWell(
           borderRadius: BorderRadius.circular(24),
+          onTapDown: onTap == null ? null : (_) => _press(true),
+          onTapCancel: onTap == null ? null : () => _press(false),
+          onTapUp: onTap == null ? null : (_) => _press(false),
           onTap: onTap == null
               ? null
               : () {
                   HapticFeedback.selectionClick();
-                  onTap!();
+                  onTap();
                 },
-          child: Padding(padding: padding, child: child),
+          child: Padding(padding: widget.padding, child: widget.child),
         ),
       ),
     );
-    return box;
+    // premium feel: cards ease in when they first appear and sink a little while pressed
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 420),
+      curve: Curves.easeOutCubic,
+      builder: (_, t, ch) => Opacity(opacity: t, child: Transform.translate(offset: Offset(0, (1 - t) * 16), child: ch)),
+      child: AnimatedScale(scale: _down ? .975 : 1, duration: const Duration(milliseconds: 140), curve: Curves.easeOut, child: box),
+    );
   }
 }
 
@@ -207,21 +229,24 @@ void toast(BuildContext c, String msg) {
     ..showSnackBar(SnackBar(content: Text(msg), duration: const Duration(seconds: 2)));
 }
 
-/// Smooth slide-and-fade route used for every page.
+/// Smooth slide-fade-and-scale route used for every page (the page underneath eases back).
 Route<T> pageRoute<T>(Widget page) => PageRouteBuilder<T>(
-      transitionDuration: const Duration(milliseconds: 420),
-      reverseTransitionDuration: const Duration(milliseconds: 340),
+      transitionDuration: const Duration(milliseconds: 460),
+      reverseTransitionDuration: const Duration(milliseconds: 360),
       pageBuilder: (_, __, ___) => page,
       transitionsBuilder: (_, a, sa, child) {
-        final curve = CurvedAnimation(parent: a, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
-        final out = CurvedAnimation(parent: sa, curve: Curves.easeOutCubic);
+        final curve = CurvedAnimation(parent: a, curve: Curves.easeOutQuart, reverseCurve: Curves.easeInCubic);
+        final out = CurvedAnimation(parent: sa, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
         return SlideTransition(
-          position: Tween(begin: const Offset(.12, 0), end: Offset.zero).animate(curve),
+          position: Tween(begin: const Offset(.10, 0), end: Offset.zero).animate(curve),
           child: FadeTransition(
             opacity: curve,
-            child: SlideTransition(
-              position: Tween(begin: Offset.zero, end: const Offset(-.06, 0)).animate(out),
-              child: child,
+            child: ScaleTransition(
+              scale: Tween(begin: .97, end: 1.0).animate(curve),
+              child: SlideTransition(
+                position: Tween(begin: Offset.zero, end: const Offset(-.06, 0)).animate(out),
+                child: ScaleTransition(scale: Tween(begin: 1.0, end: .96).animate(out), child: child),
+              ),
             ),
           ),
         );

@@ -266,7 +266,7 @@ extension Round5Ops on AppStore {
       txns.where((t) => t['kind'] == 'lend_give' && t['link'] is Map && (t['link'] as Map)['lend'] == x['id']).firstOrNull ??
       txns.where((t) => t['kind'] == 'lend_give' && !(t['link'] is Map && (t['link'] as Map)['lend'] != null) && t['who'] == x['name']).firstOrNull;
 
-  String saveLending({String? id, required String name, required String currency, required double amount, required String accId, required String due, required String note}) {
+  String saveLending({String? id, required String name, required String currency, required double amount, required String accId, required String due, required String note, String? taken}) {
     final ac = accCur(accId);
     final lentNote = ac != currency ? 'Lent ${money(amount, currency)}' : '';
     if (id != null) {
@@ -274,6 +274,10 @@ extension Round5Ops on AppStore {
       final gt = lendGiveTx(x);
       final oldA = toD(x['amount']), oldCur = lcur(x), oldAcc = gt?['accId'];
       x.addAll({'name': name, 'currency': currency, 'amount': amount, 'accId': accId, 'due': due, 'note': note});
+      if (taken != null && taken.isNotEmpty) {
+        x['created'] = taken;
+        if (gt != null) gt['date'] = taken;
+      }
       if (gt != null) {
         final amt = ac == currency ? amount : (oldCur == currency && oldAcc == accId && oldA > 0 ? round2(toD(gt['amount']) * amount / oldA) : round2(conv(amount, currency, ac)));
         gt.addAll({'who': name, 'accId': accId, 'amount': amt, 'note': lentNote, 'link': <String, dynamic>{'lend': id}});
@@ -286,10 +290,10 @@ extension Round5Ops on AppStore {
       commit();
       return id;
     }
-    final x = <String, dynamic>{'id': uid(), 'name': name, 'currency': currency, 'amount': amount, 'accId': accId, 'due': due, 'note': note, 'created': today(), 'payments': <dynamic>[]};
+    final x = <String, dynamic>{'id': uid(), 'name': name, 'currency': currency, 'amount': amount, 'accId': accId, 'due': due, 'note': note, 'created': taken ?? today(), 'payments': <dynamic>[]};
     _r5('lendings').add(x);
     (data['txns'] as List).add(<String, dynamic>{
-      'id': uid(), 'type': 'expense', 'kind': 'lend_give', 'who': name, 'accId': accId, 'amount': round2(conv(amount, currency, ac)), 'date': today(), 'time': nowTime(),
+      'id': uid(), 'type': 'expense', 'kind': 'lend_give', 'who': name, 'accId': accId, 'amount': round2(conv(amount, currency, ac)), 'date': taken ?? today(), 'time': nowTime(),
       'note': lentNote, 'tags': <dynamic>[], 'link': <String, dynamic>{'lend': x['id']},
     });
     commit();
