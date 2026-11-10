@@ -65,14 +65,8 @@ class _GlassCardState extends State<GlassCard> {
         ),
       ),
     );
-    // premium feel: cards ease in when they first appear and sink a little while pressed
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 260),
-      curve: Curves.easeOutCubic,
-      builder: (_, t, ch) => Opacity(opacity: t, child: Transform.translate(offset: Offset(0, (1 - t) * 10), child: ch)),
-      child: AnimatedScale(scale: _down ? .975 : 1, duration: const Duration(milliseconds: 140), curve: Curves.easeOut, child: box),
-    );
+    // sinks a little while pressed. (No per-card fade-in: it made big pages repaint every frame while opening.)
+    return AnimatedScale(scale: _down ? .975 : 1, duration: const Duration(milliseconds: 140), curve: Curves.easeOut, child: box);
   }
 }
 
