@@ -42,14 +42,11 @@ class SideMenu extends StatelessWidget {
 
     void go(Widget page) {
       HapticFeedback.selectionClick();
-      // Open the page first and close the menu behind it once the page has slid in,
-      // so the two animations don't run at the same time (that caused the lag).
-      final sc = Scaffold.maybeOf(context);
-      final nav = Navigator.of(context);
-      nav.push(pageRoute(page));
-      Future.delayed(const Duration(milliseconds: 340), () {
-        if (sc != null && sc.mounted && sc.isDrawerOpen) sc.closeDrawer();
-      });
+      // Start closing the menu and open the page together. The menu finishes closing (≈0.25 s)
+      // underneath the page while it slides in (0.3 s), so nothing is left half-closed to
+      // replay when you come back.
+      Scaffold.maybeOf(context)?.closeDrawer();
+      Navigator.of(context).push(pageRoute(page));
     }
 
 
