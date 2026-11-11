@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../core/currency.dart';
 import '../core/loans.dart';
+import '../core/ops.dart';
 import '../core/planning.dart';
 import '../core/plans.dart';
 import '../core/store.dart';
@@ -67,7 +68,7 @@ class _LendingsScreenState extends State<LendingsScreen> {
                     ),
                     Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                       Text(money(shown, c), style: TextStyle(fontWeight: FontWeight.w800, color: tab == 'out' ? p.warn : p.pos)),
-                      if (c != s.base) Text('≈ ${moneyB(s, s.conv(shown, c, s.base))}', style: TextStyle(color: p.muted, fontSize: 11.5)),
+                      if (c != s.base) Text('≈ ${moneyB(s, s.lconv(x, shown, c, s.base))}', style: TextStyle(color: p.muted, fontSize: 11.5)),
                     ]),
                   ]),
                   const SizedBox(height: 10),
@@ -87,7 +88,121 @@ class LendingDetailScreen extends StatelessWidget {
   const LendingDetailScreen({super.key, required this.id});
   final String id;
 
+  /// Receive Payment → choose how it's settled: cash into an account, or against an expense they paid for you.
   Future<void> _receive(BuildContext context, J x) async {
+    final p = Palette.of(context);
+    final how = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (c) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const Text('Settle lending', textAlign: TextAlign.center, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 12),
+            for (final o in [
+              ('cash', Icons.payments_outlined, 'Cash settle', 'The money comes back into one of your accounts', p.pos),
+              ('expense', Icons.receipt_long_rounded, 'Settle against expenses', 'They paid for something of yours — reduce the lending and book it as an expense. No cash moves.', p.warn),
+            ])
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Material(
+                  color: Color.alphaBlend(o.$5.withOpacity(.10), p.card),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: o.$5.withOpacity(.4))),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: () => Navigator.pop(c, o.$1),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(children: [
+                        Container(width: 40, height: 40, decoration: BoxDecoration(color: o.$5, borderRadius: BorderRadius.circular(11)), child: Icon(o.$2, color: Colors.black87, size: 22)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(o.$3, style: TextStyle(fontWeight: FontWeight.w800, color: o.$5)),
+                            Text(o.$4, style: TextStyle(color: p.muted, fontSize: 12)),
+                          ]),
+                        ),
+                        Icon(Icons.chevron_right_rounded, color: p.muted),
+                      ]),
+                    ),
+                  ),
+                ),
+              ),
+          ]),
+        ),
+      ),
+    );
+    if (how == null || !context.mounted) return;
+    if (how == 'expense') return _settleExpense(context, x);
+    return _receiveCash(context, x);
+  }
+
+  Future<void> _settleExpense(BuildContext context, J x) async {
+    final s = StoreScope.read(context);
+    final c = s.lcur(x);
+    final amt = TextEditingController();
+    final noteCtl = TextEditingController();
+    String? catId;
+    var date = today();
+    String? err;
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (bc) => StatefulBuilder(builder: (bc, set) {
+        final ss = StoreScope.of(bc);
+        final p = Palette.of(bc);
+        final cat = ss.cat(catId);
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(bc).viewInsets.bottom),
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                const Text('Settle against expenses', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+                Text('${x['name']} paid for something of yours. The lending goes down and the amount is booked as an expense — your account balances don’t change.', style: TextStyle(color: p.muted)),
+                const SizedBox(height: 14),
+                AmountBox(controller: amt, currency: c, onChanged: (_) => set(() => err = null)),
+                Padding(padding: const EdgeInsets.only(top: 4), child: Text('Current remaining balance: ${money(ss.lendRemain(x), c)}', style: TextStyle(color: p.muted, fontSize: 12.5))),
+                const SizedBox(height: 12),
+                FieldRow(
+                  icon: Icons.category_outlined,
+                  label: 'Expense category',
+                  value: cat == null ? 'Choose a category' : '${cat['icon'] ?? ''} ${cat['name']}',
+                  onTap: () async {
+                    final k = await pickCategory(bc, kind: 'expense', current: catId);
+                    if (k != null) set(() => catId = k);
+                  },
+                ),
+                const SizedBox(height: 12),
+                DateButton(value: date, label: 'Date', onChanged: (v) => set(() => date = v)),
+                const SizedBox(height: 10),
+                TextField(controller: noteCtl, decoration: const InputDecoration(labelText: 'Note')),
+                if (err != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(err!, style: TextStyle(color: p.neg))),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () {
+                    final v = parseAmount(amt.text) ?? 0;
+                    if (v <= 0) return set(() => err = 'Enter an amount above zero.');
+                    if (catId == null) return set(() => err = 'Choose the expense category.');
+                    if (ss.acc(ss.lendGiveTx(x)?['accId']?.toString() ?? x['accId']?.toString()) == null && ss.defaultAccId == null) return set(() => err = 'Create an account first.');
+                    HapticFeedback.lightImpact();
+                    Navigator.pop(bc, true);
+                  },
+                  child: const Text('Settle against expense'),
+                ),
+              ]),
+            ),
+          ),
+        );
+      }),
+    );
+    if (ok != true) return;
+    s.settleLendingAgainstExpense(id, v: parseAmount(amt.text) ?? 0, cur: c, catId: catId!, date: date, note: noteCtl.text);
+    if (context.mounted) toast(context, 'Lending settled against expense');
+  }
+
+  Future<void> _receiveCash(BuildContext context, J x) async {
     final s = StoreScope.read(context);
     final c = s.lcur(x);
     final r = await showSettleSheet(
@@ -95,7 +210,7 @@ class LendingDetailScreen extends StatelessWidget {
       title: 'Receive Payment',
       subtitle: 'Enter the payment amount received for "${x['name']}":',
       owedCur: c,
-      convert: (v, a, b) => s.conv(v, a, b),
+      convert: (v, a, b) => s.lconv(x, v, a, b),
       initCur: c,
       initAmt: '',
       accId: s.acc(x['accId']?.toString()) != null ? '${x['accId']}' : s.defaultAccId,
@@ -112,7 +227,7 @@ class LendingDetailScreen extends StatelessWidget {
     final s = StoreScope.read(context);
     final c = s.lcur(x), pc = '${pm['payCur'] ?? c}';
     final t = s.txns.where((y) => y['id'] == pm['txId']).firstOrNull;
-    final rate = pc == c ? 1.0 : (toD(pm['rate']) != 0 ? toD(pm['rate']) : s.rates.rateOf(pc, c));
+    final rate = pc == c ? 1.0 : (toD(pm['rate']) != 0 ? toD(pm['rate']) : s.lconv(x, 1, pc, c));
     final r = await showPaySheet(
       context,
       title: 'Edit received payment',
@@ -188,6 +303,9 @@ class LendingDetailScreen extends StatelessWidget {
             const Text('Loan Information', style: TextStyle(fontWeight: FontWeight.w800)),
             kvRow(p, 'Loan Name', '${x['name']}'),
             kvRow(p, 'Currency', '$c — ${kCurrencyMap[c]?.name ?? ''}'),
+            if (x['rates'] is Map)
+              for (final k in (x['rates'] as Map).keys)
+                kvRow(p, 'Agreed rate', s.loanRateInv(x, '$k') ? '1 $k = ${(1 / toD((x['rates'] as Map)[k])).toStringAsFixed(4)} $c' : '1 $c = ${toD((x['rates'] as Map)[k]).toStringAsFixed(4)} $k'),
             kvRow(p, 'Original Amount', M(amt)),
             kvRow(p, 'Remaining Amount', M(rem)),
             if (over > 0) kvRow(p, 'Overpaid Amount', M(over)),
@@ -217,6 +335,7 @@ class LendingDetailScreen extends StatelessWidget {
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(M(toD(y['amount'])), style: TextStyle(color: p.pos, fontWeight: FontWeight.w800)),
                       if (y['payCur'] != null && y['payCur'] != c) Text('Received ${money(toD(y['paid']), '${y['payCur']}')} · 1 ${y['payCur']} = ${toD(y['rate']).toStringAsFixed(4)} $c', style: TextStyle(color: p.muted, fontSize: 12)),
+                      if (y['method'] == 'expense') Text('Settled against expense${s.cat(y['catId']) != null ? ' · ${s.cat(y['catId'])!['name']}' : ''}', style: TextStyle(color: p.warn, fontSize: 12)),
                     ]),
                   ),
                   Text(fmtDate('${y['date']}'), style: TextStyle(color: p.muted, fontSize: 12.5)),
@@ -237,7 +356,7 @@ class LendingDetailScreen extends StatelessWidget {
             ),
         const SectionTitle('Timeline'),
         for (final e in [
-          for (final y in pays.reversed) (d: '${y['date']}', t: 'Payment Received', s: 'Payment of ${y['payCur'] != null && y['payCur'] != c ? '${money(toD(y['paid']), '${y['payCur']}')} (${M(toD(y['amount']))})' : M(toD(y['amount']))}'),
+          for (final y in pays.reversed) (d: '${y['date']}', t: y['method'] == 'expense' ? 'Settled against expense' : 'Payment Received', s: 'Payment of ${y['payCur'] != null && y['payCur'] != c ? '${money(toD(y['paid']), '${y['payCur']}')} (${M(toD(y['amount']))})' : M(toD(y['amount']))}'),
           (d: '${x['created'] ?? ''}', t: 'Lending Created', s: 'Lending of ${M(amt)} was created'),
         ])
           Padding(
@@ -272,6 +391,8 @@ class _LendingFormScreenState extends State<LendingFormScreen> {
   String taken = today();
   String? err;
   bool _init = false;
+  final rateCtl = <String, TextEditingController>{};
+  final rateInv = <String, bool>{};
 
   @override
   void didChangeDependencies() {
@@ -291,7 +412,26 @@ class _LendingFormScreenState extends State<LendingFormScreen> {
       due = '${x['due'] ?? addMonths(today(), 1)}';
       taken = '${gt?['date'] ?? x['created'] ?? today()}';
       note.text = '${x['note'] ?? ''}';
+      final rs = x['rates'] is Map ? x['rates'] as Map : const {};
+      for (final k in rs.keys) {
+        final inv = s.loanRateInv(x, '$k');
+        rateInv['$k'] = inv;
+        final v = toD(rs[k]);
+        rateCtl['$k'] = TextEditingController(text: v == 0 ? '' : (inv ? 1 / v : v).toStringAsFixed(6).replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), ''));
+      }
     }
+  }
+
+  bool _inv(AppStore s, String c) => rateInv[c] ?? !s.fxStrong(currency, c);
+  TextEditingController _ctl(String c) => rateCtl.putIfAbsent(c, () => TextEditingController());
+
+  Map<String, double> _rates(AppStore s) {
+    final o = <String, double>{};
+    rateCtl.forEach((c, ctl) {
+      final v = parseAmount(ctl.text) ?? 0;
+      if (v > 0 && c != currency) o[c] = _inv(s, c) ? 1 / v : v;
+    });
+    return o;
   }
 
   @override
@@ -299,6 +439,9 @@ class _LendingFormScreenState extends State<LendingFormScreen> {
     name.dispose();
     amount.dispose();
     note.dispose();
+    for (final c in rateCtl.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -315,7 +458,9 @@ class _LendingFormScreenState extends State<LendingFormScreen> {
     }
     if (e != null) return setState(() => err = e);
     final isNew = widget.existing == null;
-    final id = s.saveLending(id: widget.existing?['id']?.toString(), name: name.text.trim(), currency: currency, amount: v, accId: accId!, due: due, note: note.text, taken: taken);
+    final rates = _rates(s);
+    final dir = <String, bool>{for (final c in rates.keys) c: _inv(s, c)};
+    final id = s.saveLending(id: widget.existing?['id']?.toString(), name: name.text.trim(), currency: currency, amount: v, accId: accId!, due: due, note: note.text, taken: taken, rates: rates, rateDir: dir);
     HapticFeedback.lightImpact();
     final nav = Navigator.of(context);
     nav.pop();
@@ -331,6 +476,8 @@ class _LendingFormScreenState extends State<LendingFormScreen> {
     final locked = x != null && s.lendPayments(x).isNotEmpty;
     final v = parseAmount(amount.text) ?? 0;
     final ac = accId == null ? null : s.accCur(accId);
+    final curs = <String>{s.base, ...s.accounts.map((a) => '${a['currency']}')}.where((c) => c.isNotEmpty && c != currency).toList();
+    final tmp = <String, dynamic>{'currency': currency, 'rates': _rates(s)};
     return Scaffold(
       appBar: AppBar(title: Text(x != null ? 'Edit Lending' : 'New Lending')),
       bottomNavigationBar: SafeArea(child: Padding(padding: const EdgeInsets.fromLTRB(16, 6, 16, 10), child: FilledButton(onPressed: _save, child: Text(x != null ? 'Save changes' : 'Save')))),
@@ -354,8 +501,57 @@ class _LendingFormScreenState extends State<LendingFormScreen> {
         if (ac != null && ac != currency && v > 0)
           Padding(
             padding: const EdgeInsets.only(top: 6),
-            child: Text('${money(s.conv(v, currency, ac), ac)} will be taken from ${s.accName(accId)} (1 $currency = ${s.rates.rateOf(currency, ac).toStringAsFixed(4)} $ac).', style: TextStyle(color: p.muted, fontSize: 12.5)),
+            child: Text('${money(s.lconv(tmp, v, currency, ac), ac)} will be taken from ${s.accName(accId)} (1 $currency = ${s.lconv(tmp, 1, currency, ac).toStringAsFixed(4)} $ac${(tmp['rates'] as Map)[ac] != null ? ', agreed rate' : ''}).', style: TextStyle(color: p.muted, fontSize: 12.5)),
           ),
+        if (curs.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          GlassCard(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Agreed exchange rates (optional)', style: TextStyle(fontWeight: FontWeight.w800)),
+              Text('The rate agreed for this lending. Received payments and the balance use it first instead of the app rate — only for this lending.', style: TextStyle(color: p.muted, fontSize: 12.5)),
+              for (final c in curs)
+                Builder(builder: (_) {
+                  final inv = _inv(s, c);
+                  final A = inv ? c : currency, B = inv ? currency : c;
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Row(children: [
+                      const Text('1 '),
+                      ActionChip(
+                        label: Text('$A ⇄'),
+                        onPressed: () => setState(() {
+                          final vv = parseAmount(_ctl(c).text) ?? 0;
+                          rateInv[c] = !inv;
+                          if (vv > 0) _ctl(c).text = (1 / vv).toStringAsFixed(6).replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
+                        }),
+                      ),
+                      const Text(' = '),
+                      Expanded(
+                        child: TextField(
+                          key: ValueKey('lendRate_$c'),
+                          controller: _ctl(c),
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          onChanged: (_) => setState(() => rateInv[c] = inv),
+                          decoration: InputDecoration(hintText: s.rates.rateOf(A, B).toStringAsFixed(4), isDense: true),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(B, style: const TextStyle(fontWeight: FontWeight.w800)),
+                    ]),
+                  );
+                }),
+              if (v > 0)
+                for (final c in curs.where((c) => c == s.base || (tmp['rates'] as Map)[c] != null))
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      '≈ ${money(s.lconv(tmp, v, currency, c), c)} at ${s.fxStrong(currency, c) ? '1 $currency = ${s.lconv(tmp, 1, currency, c).toStringAsFixed(4)} $c' : '1 $c = ${s.lconv(tmp, 1, c, currency).toStringAsFixed(4)} $currency'}${(tmp['rates'] as Map)[c] != null ? ' (agreed rate)' : ''}',
+                      style: TextStyle(color: p.pos, fontSize: 12.5),
+                    ),
+                  ),
+            ]),
+          ),
+        ],
         const SizedBox(height: 12),
         DateButton(value: taken, label: 'Lending taken date', onChanged: (v) => setState(() => taken = v)),
         const SizedBox(height: 12),

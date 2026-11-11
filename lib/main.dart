@@ -53,13 +53,30 @@ class SalliApp extends StatelessWidget {
               child: MediaQuery(
                 data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(MediaQuery.of(context).textScaler.scale(14) / 14 * _fontScale(set))),
                 // lock screen / privacy cover sit above every open page, so your place is kept underneath
-                child: KeyboardRefresher(child: LockGuard(child: child ?? const SizedBox.shrink())),
+                child: _NavBarSafe(child: KeyboardRefresher(child: LockGuard(child: child ?? const SizedBox.shrink()))),
               ),
             );
           },
           home: const _Root(),
         );
       }),
+    );
+  }
+}
+
+/// Phone navigation bar:
+/// - 3-button bar → every page (and bottom sheet) stops above the buttons, so nothing hides under them;
+/// - swipe gestures → pages stay full screen (drawn edge to edge).
+class _NavBarSafe extends StatelessWidget {
+  const _NavBarSafe({required this.child});
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    final buttons = MediaQuery.viewPaddingOf(context).bottom >= 32; // button bar ≈ 48dp, gesture handle ≈ 0–24dp
+    if (!buttons) return child;
+    return ColoredBox(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: SafeArea(top: false, left: false, right: false, child: child),
     );
   }
 }

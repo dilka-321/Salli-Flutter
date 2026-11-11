@@ -260,30 +260,41 @@ extension Round5Ops on AppStore {
   List<J> lendPayments(J x) => _pays(x);
   double lendPaid(J x) => _pays(x).fold(0.0, (a, p) => a + toD(p['amount']));
   double lendRemain(J x) => math.max(0.0, round2(toD(x['amount']) - lendPaid(x)));
-  double lendRemainB(J x) => conv(lendRemain(x), lcur(x), base);
+  double lendRemainB(J x) => lconv(x, lendRemain(x), lcur(x), base);
 
   J? lendGiveTx(J x) =>
       txns.where((t) => t['kind'] == 'lend_give' && t['link'] is Map && (t['link'] as Map)['lend'] == x['id']).firstOrNull ??
       txns.where((t) => t['kind'] == 'lend_give' && !(t['link'] is Map && (t['link'] as Map)['lend'] != null) && t['who'] == x['name']).firstOrNull;
 
-  String saveLending({String? id, required String name, required String currency, required double amount, required String accId, required String due, required String note, String? taken}) {
+  /// Add or edit a lending. [rates] / [rateDir] are the agreed exchange rates for this lending only
+  /// (same format as loans: units of CUR per 1 lending currency); without them the app rate is used.
+  String saveLending({String? id, required String name, required String currency, required double amount, required String accId, required String due, required String note, String? taken, Map<String, double>? rates, Map<String, bool>? rateDir}) {
     final ac = accCur(accId);
     final lentNote = ac != currency ? 'Lent ${money(amount, currency)}' : '';
+    final rs = <String, dynamic>{...?rates}, rd = <String, dynamic>{...?rateDir};
     if (id != null) {
       final x = lending(id)!;
       final gt = lendGiveTx(x);
       final oldA = toD(x['amount']), oldCur = lcur(x), oldAcc = gt?['accId'];
       x.addAll({'name': name, 'currency': currency, 'amount': amount, 'accId': accId, 'due': due, 'note': note});
+      if (rates != null) {
+        x['rates'] = rs;
+        x['rateDir'] = rd;
+      }
       if (taken != null && taken.isNotEmpty) {
         x['created'] = taken;
         if (gt != null) gt['date'] = taken;
       }
       if (gt != null) {
-        final amt = ac == currency ? amount : (oldCur == currency && oldAcc == accId && oldA > 0 ? round2(toD(gt['amount']) * amount / oldA) : round2(conv(amount, currency, ac)));
+        final amt = ac == currency
+            ? amount
+            : rs[ac] != null
+                ? round2(lconv(x, amount, currency, ac))
+                : (oldCur == currency && oldAcc == accId && oldA > 0 ? round2(toD(gt['amount']) * amount / oldA) : round2(lconv(x, amount, currency, ac)));
         gt.addAll({'who': name, 'accId': accId, 'amount': amt, 'note': lentNote, 'link': <String, dynamic>{'lend': id}});
       } else {
         (data['txns'] as List).add(<String, dynamic>{
-          'id': uid(), 'type': 'expense', 'kind': 'lend_give', 'who': name, 'accId': accId, 'amount': round2(conv(amount, currency, ac)), 'date': x['created'] ?? today(),
+          'id': uid(), 'type': 'expense', 'kind': 'lend_give', 'who': name, 'accId': accId, 'amount': round2(lconv(x, amount, currency, ac)), 'date': x['created'] ?? today(),
           'time': nowTime(), 'note': lentNote, 'tags': <dynamic>[], 'link': <String, dynamic>{'lend': id},
         });
       }
@@ -291,9 +302,13 @@ extension Round5Ops on AppStore {
       return id;
     }
     final x = <String, dynamic>{'id': uid(), 'name': name, 'currency': currency, 'amount': amount, 'accId': accId, 'due': due, 'note': note, 'created': taken ?? today(), 'payments': <dynamic>[]};
+    if (rs.isNotEmpty) {
+      x['rates'] = rs;
+      x['rateDir'] = rd;
+    }
     _r5('lendings').add(x);
     (data['txns'] as List).add(<String, dynamic>{
-      'id': uid(), 'type': 'expense', 'kind': 'lend_give', 'who': name, 'accId': accId, 'amount': round2(conv(amount, currency, ac)), 'date': taken ?? today(), 'time': nowTime(),
+      'id': uid(), 'type': 'expense', 'kind': 'lend_give', 'who': name, 'accId': accId, 'amount': round2(lconv(x, amount, currency, ac)), 'date': taken ?? today(), 'time': nowTime(),
       'note': lentNote, 'tags': <dynamic>[], 'link': <String, dynamic>{'lend': x['id']},
     });
     commit();
@@ -308,6 +323,7 @@ extension Round5Ops on AppStore {
     if (gt != null) ids.add('${gt['id']}');
     for (final p in _pays(x)) {
       if (p['txId'] != null) ids.add('${p['txId']}');
+      if (p['expTxId'] != null) ids.add('${p['expTxId']}');
     }
     _dropTx(ids);
     (data['lendings'] as List).removeWhere((y) => y is Map && y['id'] == id);
@@ -318,9 +334,39 @@ extension Round5Ops on AppStore {
     final x = lending(id)!;
     _pays(x);
     final c = lcur(x);
-    final t = <String, dynamic>{'id': uid(), 'type': 'income', 'kind': 'lend_receive', 'who': x['name'], 'accId': accId, 'amount': round2(conv(v, cur, accCur(accId))), 'date': date, 'time': nowTime(), 'note': note, 'tags': <dynamic>[]};
+    final t = <String, dynamic>{'id': uid(), 'type': 'income', 'kind': 'lend_receive', 'who': x['name'], 'accId': accId, 'amount': round2(lconv(x, v, cur, accCur(accId))), 'date': date, 'time': nowTime(), 'note': note, 'tags': <dynamic>[]};
     (data['txns'] as List).add(t);
-    (x['payments'] as List).add(<String, dynamic>{'id': uid(), 'amount': round2(conv(v, cur, c)), 'paid': v, 'payCur': cur, 'rate': rates.rateOf(cur, c), 'accId': accId, 'date': date, 'note': note, 'txId': t['id']});
+    (x['payments'] as List).add(<String, dynamic>{'id': uid(), 'amount': round2(lconv(x, v, cur, c)), 'paid': v, 'payCur': cur, 'rate': lconv(x, 1, cur, c), 'accId': accId, 'date': date, 'note': note, 'txId': t['id']});
+    commit();
+  }
+
+  /// Settle part of a lending against an expense the person paid for you (no cash moves):
+  /// the lending goes down and the amount is booked as an expense in [catId].
+  /// Two linked entries are made in the same account (lending settled + the expense), so balances don't change.
+  void settleLendingAgainstExpense(String id, {required double v, required String cur, required String catId, required String date, required String note}) {
+    final x = lending(id);
+    if (x == null) return;
+    _pays(x);
+    final c = lcur(x);
+    final accId = lendGiveTx(x)?['accId']?.toString() ?? x['accId']?.toString() ?? defaultAccId;
+    if (accId == null) return;
+    final ac = accCur(accId);
+    final amt = round2(lconv(x, v, cur, ac));
+    final t1 = <String, dynamic>{
+      'id': uid(), 'type': 'income', 'kind': 'lend_offset', 'who': x['name'], 'accId': accId, 'amount': amt, 'date': date, 'time': nowTime(),
+      'note': 'Settled against expense', 'tags': <dynamic>[], 'link': <String, dynamic>{'lend': id},
+    };
+    final t2 = <String, dynamic>{
+      'id': uid(), 'type': 'expense', 'kind': 'normal', 'catId': catId, 'accId': accId, 'amount': amt, 'date': date, 'time': nowTime(),
+      'note': note.trim().isEmpty ? 'Paid by ${x['name']} (lending settled)' : note.trim(), 'tags': <dynamic>[], 'link': <String, dynamic>{'lendExp': id},
+    };
+    (data['txns'] as List)
+      ..add(t1)
+      ..add(t2);
+    (x['payments'] as List).add(<String, dynamic>{
+      'id': uid(), 'amount': round2(lconv(x, v, cur, c)), 'paid': v, 'payCur': cur, 'rate': lconv(x, 1, cur, c), 'accId': accId, 'date': date, 'note': note,
+      'txId': t1['id'], 'expTxId': t2['id'], 'method': 'expense', 'catId': catId,
+    });
     commit();
   }
 
@@ -329,15 +375,17 @@ extension Round5Ops on AppStore {
     final p = x == null ? null : _pays(x).where((y) => y['id'] == pid).firstOrNull;
     if (x == null || p == null) return;
     final c = lcur(x), pc = '${p['payCur'] ?? c}', ac = accCur(accId);
-    final rate = pc == c ? 1.0 : (toD(p['rate']) != 0 ? toD(p['rate']) : rates.rateOf(pc, c));
+    final rate = pc == c ? 1.0 : (toD(p['rate']) != 0 ? toD(p['rate']) : lconv(x, 1, pc, c));
     p.addAll({'paid': v, 'payCur': pc, 'rate': rate, 'amount': round2(pc == c ? v : v * rate), 'accId': accId, 'date': date, 'note': note});
+    final et = p['expTxId'] == null ? null : _tx(p['expTxId']);
+    if (et != null) et.addAll({'accId': accId, 'amount': round2(lconv(x, v, pc, ac)), 'date': date});
     var t = _tx(p['txId']);
     if (t == null) {
       t = <String, dynamic>{'id': uid(), 'type': 'income', 'kind': 'lend_receive', 'who': x['name'], 'time': nowTime(), 'tags': <dynamic>[]};
       (data['txns'] as List).add(t);
       p['txId'] = t['id'];
     }
-    t.addAll({'accId': accId, 'amount': round2(conv(v, pc, ac)), 'date': date, 'note': note});
+    t.addAll({'accId': accId, 'amount': round2(lconv(x, v, pc, ac)), 'date': date, 'note': p['expTxId'] != null ? t['note'] : note});
     commit();
   }
 
@@ -347,6 +395,7 @@ extension Round5Ops on AppStore {
     final p = _pays(x).where((y) => y['id'] == pid).firstOrNull;
     (x['payments'] as List).removeWhere((y) => y is Map && y['id'] == pid);
     if (p?['txId'] != null) _dropTx({'${p!['txId']}'});
+    if (p?['expTxId'] != null) _dropTx({'${p!['expTxId']}'});
     commit();
   }
 
@@ -361,7 +410,7 @@ extension Round5Ops on AppStore {
     }
     for (final x in lendings) {
       if (lendGiveTx(x)?['id'] == id) return (kind: 'lend', id: '${x['id']}');
-      if (_pays(x).any((p) => p['txId'] == id)) return (kind: 'lend', id: '${x['id']}');
+      if (_pays(x).any((p) => p['txId'] == id || p['expTxId'] == id)) return (kind: 'lend', id: '${x['id']}');
     }
     return null;
   }

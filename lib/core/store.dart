@@ -461,7 +461,7 @@ class AppStore extends ChangeNotifier with WidgetsBindingObserver {
   static const _statExp = ['normal', 'recurring', 'sub', 'inst', 'bank_fee', 'fx_loss'];
   bool isInc(J t) => t['type'] == 'income' && _statInc.contains(t['kind'] ?? 'normal');
   bool isExp(J t) => t['type'] == 'expense' && _statExp.contains(t['kind'] ?? 'normal');
-  bool isCashIn(J t) => t['type'] == 'income' && !['initial', 'correction', 'transfer_in', 'loan_receive'].contains(t['kind']);
+  bool isCashIn(J t) => t['type'] == 'income' && !['initial', 'correction', 'transfer_in', 'loan_receive', 'lend_offset'].contains(t['kind']);
   bool isCashOut(J t) => t['type'] == 'expense' && !['initial', 'correction', 'transfer_out'].contains(t['kind']);
 
   // ---- loans: their own agreed exchange rates (same as the web app)
@@ -529,6 +529,7 @@ class AppStore extends ChangeNotifier with WidgetsBindingObserver {
     'transfer_out': ('Transfer Out', '🔁'),
     'lend_give': ('Give Lending', '🤲'),
     'lend_receive': ('Receive Lending', '🤲'),
+    'lend_offset': ('Lending settled as expense', '🤲'),
     'loan_receive': ('Loan', '🏦'),
     'loan_pay': ('Loan Payment', '🏦'),
     'bank_fee': ('Bank Fee', '🏛️'),
@@ -538,7 +539,7 @@ class AppStore extends ChangeNotifier with WidgetsBindingObserver {
     'goal': ('Goal Saving', '🎯'),
     'inst': ('Installment', '🧾'),
   };
-  static const _noCatTitle = ['transfer_in', 'transfer_out', 'initial', 'correction', 'lend_give', 'lend_receive', 'loan_receive', 'loan_pay', 'bank_fee', 'card_pay'];
+  static const _noCatTitle = ['transfer_in', 'transfer_out', 'initial', 'correction', 'lend_give', 'lend_receive', 'lend_offset', 'loan_receive', 'loan_pay', 'bank_fee', 'card_pay'];
 
   String txTitle(J t) {
     final c = cat(t['catId']);
@@ -558,7 +559,7 @@ class AppStore extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Plain income/expense entries can be edited here. Entries created by loans, transfers,
   /// subscriptions etc. are linked to other records, so they are edited in those sections.
-  bool canEdit(J t) => t['kind'] == null || t['kind'] == 'normal';
+  bool canEdit(J t) => (t['kind'] == null || t['kind'] == 'normal') && !(t['link'] is Map && (t['link'] as Map)['lendExp'] != null);
 
   // ================================================================= changes
   void saveTx(J t) {

@@ -66,6 +66,30 @@ void main() {
     expect(s.txns, isEmpty);
   });
 
+  test('lending agreed rate is used first when giving and receiving', () {
+    final id = s.saveLending(name: 'Nimal', currency: 'MVR', amount: 100, accId: 'lk', due: '2026-12-01', note: '', rates: {'LKR': 20}, rateDir: {'LKR': false});
+    final x = s.lending(id)!;
+    expect(s.txns.single['amount'], 2000);
+    expect(s.lendRemainB(x), 2000);
+    s.receiveLending(id, v: 1000, cur: 'LKR', accId: 'lk', date: today(), note: '');
+    expect(s.lendRemain(x), 50);
+  });
+
+  test('settle lending against an expense: lending goes down, expense booked, balance unchanged', () {
+    final id = s.saveLending(name: 'Ali', currency: 'LKR', amount: 5000, accId: 'lk', due: '2026-12-01', note: '');
+    final x = s.lending(id)!;
+    final bal = s.accBal(s.acc('lk')!);
+    s.settleLendingAgainstExpense(id, v: 1200, cur: 'LKR', catId: 'bc', date: today(), note: 'Lunch');
+    expect(s.lendRemain(x), 3800);
+    expect(s.accBal(s.acc('lk')!), bal);
+    final e = s.txns.firstWhere((t) => t['catId'] == 'bc');
+    expect(e['amount'], 1200);
+    expect(s.isExp(e), true);
+    expect(s.canEdit(e), false);
+    s.deleteLendPayment(id, '${s.lendPayments(x).single['id']}');
+    expect(s.txns.length, 1);
+  });
+
   test('lending taken date sets the lending and its transaction date', () {
     final id = s.saveLending(name: 'Kamal', currency: 'LKR', amount: 1000, accId: 'lk', due: '2026-12-01', note: '', taken: '2026-10-05');
     expect(s.lending(id)!['created'], '2026-10-05');
