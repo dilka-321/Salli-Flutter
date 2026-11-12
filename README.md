@@ -10,7 +10,11 @@ This is the native rebuild of the Salli money manager. It signs in to **the same
 
 If a build turns red: open the failed step, copy the red error lines (or screenshot them) and send them to Claude to fix.
 
-## 2.0.8 (this version)
+## 2.0.9 (this version)
+- **Agreed exchange rates (loans & lendings):** when the loan / lending isn't in USD, other currencies are entered against USD (e.g. on an LKR loan: "1 USD = x LKR" and "1 USD = x MVR"). The MVR ⇄ LKR rate is worked out automatically from those two (if the USD row is empty, the app's USD rate is used).
+- **Lendings — settle against expenses:** now has the same currency button as Cash settle. Changing it converts the amount using the lending's agreed rate first (else the app rate) and shows how much comes off the balance.
+
+## 2.0.8
 - **Phone navigation bar:** with the 3-button bar, every page and bottom sheet now stops above the buttons (Quick Save, Save etc. are no longer hidden). With swipe gestures the app stays full screen.
 - **Lendings — agreed exchange rates:** New / Edit Lending has "Agreed exchange rates (optional)", same as loans. The amount taken from the account, the balance in other currencies (net worth, overview) and received payments use the agreed rate first; without one the app rate is used. Shown on the lending page as "Agreed rate".
 - **Lendings — settle against expenses:** "Receive Payment" now asks how to settle: **Cash settle** (as before) or **Settle against expenses** (e.g. they paid for your food). The lending goes down and the amount is booked as an expense in the chosen category; your account balances don't change. Deleting that payment removes the expense too.

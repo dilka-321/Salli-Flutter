@@ -145,6 +145,7 @@ class LendingDetailScreen extends StatelessWidget {
     final noteCtl = TextEditingController();
     String? catId;
     var date = today();
+    var cur = c;
     String? err;
     final ok = await showModalBottomSheet<bool>(
       context: context,
@@ -162,7 +163,32 @@ class LendingDetailScreen extends StatelessWidget {
                 const Text('Settle against expenses', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
                 Text('${x['name']} paid for something of yours. The lending goes down and the amount is booked as an expense — your account balances don’t change.', style: TextStyle(color: p.muted)),
                 const SizedBox(height: 14),
-                AmountBox(controller: amt, currency: c, onChanged: (_) => set(() => err = null)),
+                Row(children: [
+                  Text('AMOUNT', style: TextStyle(color: p.muted, fontSize: 12, fontWeight: FontWeight.w800)),
+                  const Spacer(),
+                  ActionChip(
+                    label: Text('${currencySymbol(cur)} $cur ▾'),
+                    onPressed: () async {
+                      final k = await pickCurrency(bc, cur);
+                      if (k == null) return;
+                      set(() {
+                        final vv = parseAmount(amt.text) ?? 0;
+                        // same conversion as the cash settle: the lending's agreed rate first, else the app rate
+                        if (vv > 0) amt.text = plainNum(round2(ss.lconv(x, vv, cur, k)));
+                        cur = k;
+                      });
+                    },
+                  ),
+                ]),
+                AmountBox(controller: amt, currency: cur, label: '', onChanged: (_) => set(() => err = null)),
+                if (cur != c && (parseAmount(amt.text) ?? 0) > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      '= ${money(ss.lconv(x, parseAmount(amt.text) ?? 0, cur, c), c)} off the balance · ${ss.fxStrong(cur, c) ? '1 $cur = ${ss.lconv(x, 1, cur, c).toStringAsFixed(4)} $c' : '1 $c = ${ss.lconv(x, 1, c, cur).toStringAsFixed(4)} $cur'}',
+                      style: TextStyle(color: p.pos, fontSize: 12.5),
+                    ),
+                  ),
                 Padding(padding: const EdgeInsets.only(top: 4), child: Text('Current remaining balance: ${money(ss.lendRemain(x), c)}', style: TextStyle(color: p.muted, fontSize: 12.5))),
                 const SizedBox(height: 12),
                 FieldRow(
@@ -198,7 +224,7 @@ class LendingDetailScreen extends StatelessWidget {
       }),
     );
     if (ok != true) return;
-    s.settleLendingAgainstExpense(id, v: parseAmount(amt.text) ?? 0, cur: c, catId: catId!, date: date, note: noteCtl.text);
+    s.settleLendingAgainstExpense(id, v: parseAmount(amt.text) ?? 0, cur: cur, catId: catId!, date: date, note: noteCtl.text);
     if (context.mounted) toast(context, 'Lending settled against expense');
   }
 
@@ -414,23 +440,44 @@ class _LendingFormScreenState extends State<LendingFormScreen> {
       note.text = '${x['note'] ?? ''}';
       final rs = x['rates'] is Map ? x['rates'] as Map : const {};
       for (final k in rs.keys) {
-        final inv = s.loanRateInv(x, '$k');
+        // a currency entered against USD (e.g. USD ⇄ MVR on an LKR lending) is shown as that USD rate again
+        final b = _rbase(s, '$k');
+        final dd = x['rateDir'];
+        final inv = dd is Map && dd[k] != null ? dd[k] == true : !s.fxStrong(b, '$k');
         rateInv['$k'] = inv;
-        final v = toD(rs[k]);
+        final usdPer = toD(rs['USD']) != 0 ? toD(rs['USD']) : s.rates.rateOf(currency, 'USD');
+        final v = b == currency ? toD(rs[k]) : (usdPer == 0 ? 0.0 : toD(rs[k]) / usdPer);
         rateCtl['$k'] = TextEditingController(text: v == 0 ? '' : (inv ? 1 / v : v).toStringAsFixed(6).replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), ''));
       }
     }
   }
 
-  bool _inv(AppStore s, String c) => rateInv[c] ?? !s.fxStrong(currency, c);
+  /// The currency a rate row is entered against: USD when the loan / lending isn't in USD and USD is one of the rows
+  /// (so "1 USD = x LKR" and "1 USD = x MVR" give MVR ⇄ LKR automatically); otherwise the loan / lending currency.
+  String _rbase(AppStore s, String c) {
+    final all = <String>{s.base, ...s.accounts.map((a) => '${a['currency']}')};
+    return currency != 'USD' && c != 'USD' && all.contains('USD') ? 'USD' : currency;
+  }
+
+  bool _inv(AppStore s, String c) => rateInv[c] ?? !s.fxStrong(_rbase(s, c), c);
   TextEditingController _ctl(String c) => rateCtl.putIfAbsent(c, () => TextEditingController());
 
   Map<String, double> _rates(AppStore s) {
     final o = <String, double>{};
+    final cross = <String, double>{};
     rateCtl.forEach((c, ctl) {
       final v = parseAmount(ctl.text) ?? 0;
-      if (v > 0 && c != currency) o[c] = _inv(s, c) ? 1 / v : v;
+      if (v <= 0 || c == currency) return;
+      final per = _inv(s, c) ? 1 / v : v; // units of c per 1 row-base currency
+      if (_rbase(s, c) == currency) {
+        o[c] = per;
+      } else {
+        cross[c] = per;
+      }
     });
+    // c per 1 loan currency = (c per 1 USD) × (USD per 1 loan currency) — the USD rate entered above, else the app rate
+    final usdPer = o['USD'] ?? s.rates.rateOf(currency, 'USD');
+    cross.forEach((c, per) => o[c] = per * usdPer);
     return o;
   }
 
@@ -512,7 +559,8 @@ class _LendingFormScreenState extends State<LendingFormScreen> {
               for (final c in curs)
                 Builder(builder: (_) {
                   final inv = _inv(s, c);
-                  final A = inv ? c : currency, B = inv ? currency : c;
+                  final rb = _rbase(s, c);
+                  final A = inv ? c : rb, B = inv ? rb : c;
                   return Padding(
                     padding: const EdgeInsets.only(top: 10),
                     child: Row(children: [

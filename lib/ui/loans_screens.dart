@@ -685,9 +685,13 @@ class _LoanFormScreenState extends State<LoanFormScreen> {
       start = '${l['start'] ?? today()}';
       final rs = l['rates'] is Map ? l['rates'] as Map : const {};
       for (final k in rs.keys) {
-        final inv = s.loanRateInv(l, '$k');
+        // a currency entered against USD (e.g. USD ⇄ MVR on an LKR loan) is shown as that USD rate again
+        final b = _rbase(s, '$k');
+        final dd = l['rateDir'];
+        final inv = dd is Map && dd[k] != null ? dd[k] == true : !s.fxStrong(b, '$k');
         rateInv['$k'] = inv;
-        final v = toD(rs[k]);
+        final usdPer = toD(rs['USD']) != 0 ? toD(rs['USD']) : s.rates.rateOf(currency, 'USD');
+        final v = b == currency ? toD(rs[k]) : (usdPer == 0 ? 0.0 : toD(rs[k]) / usdPer);
         rateCtl['$k'] = TextEditingController(text: v == 0 ? '' : (inv ? 1 / v : v).toStringAsFixed(6).replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), ''));
       }
     }
@@ -702,15 +706,32 @@ class _LoanFormScreenState extends State<LoanFormScreen> {
   }
 
   bool get _locked => widget.existing != null && StoreScope.read(context).loanPayments(widget.existing!).isNotEmpty;
-  bool _inv(AppStore s, String c) => rateInv[c] ?? !s.fxStrong(currency, c);
+  /// The currency a rate row is entered against: USD when the loan / lending isn't in USD and USD is one of the rows
+  /// (so "1 USD = x LKR" and "1 USD = x MVR" give MVR ⇄ LKR automatically); otherwise the loan / lending currency.
+  String _rbase(AppStore s, String c) {
+    final all = <String>{s.base, ...s.accounts.map((a) => '${a['currency']}')};
+    return currency != 'USD' && c != 'USD' && all.contains('USD') ? 'USD' : currency;
+  }
+
+  bool _inv(AppStore s, String c) => rateInv[c] ?? !s.fxStrong(_rbase(s, c), c);
   TextEditingController _ctl(String c) => rateCtl.putIfAbsent(c, () => TextEditingController());
 
   Map<String, double> _rates(AppStore s) {
     final o = <String, double>{};
+    final cross = <String, double>{};
     rateCtl.forEach((c, ctl) {
       final v = parseAmount(ctl.text) ?? 0;
-      if (v > 0 && c != currency) o[c] = _inv(s, c) ? 1 / v : v;
+      if (v <= 0 || c == currency) return;
+      final per = _inv(s, c) ? 1 / v : v; // units of c per 1 row-base currency
+      if (_rbase(s, c) == currency) {
+        o[c] = per;
+      } else {
+        cross[c] = per;
+      }
     });
+    // c per 1 loan currency = (c per 1 USD) × (USD per 1 loan currency) — the USD rate entered above, else the app rate
+    final usdPer = o['USD'] ?? s.rates.rateOf(currency, 'USD');
+    cross.forEach((c, per) => o[c] = per * usdPer);
     return o;
   }
 
@@ -807,7 +828,8 @@ class _LoanFormScreenState extends State<LoanFormScreen> {
               for (final c in curs)
                 Builder(builder: (_) {
                   final inv = _inv(s, c);
-                  final A = inv ? c : currency, B = inv ? currency : c;
+                  final rb = _rbase(s, c);
+                  final A = inv ? c : rb, B = inv ? rb : c;
                   return Padding(
                     padding: const EdgeInsets.only(top: 10),
                     child: Row(children: [

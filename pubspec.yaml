@@ -1,7 +1,7 @@
 name: salli_flutter
 description: Salli money manager — native app (Flutter).
 publish_to: 'none'
-version: 2.0.8+708
+version: 2.0.9+709
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
