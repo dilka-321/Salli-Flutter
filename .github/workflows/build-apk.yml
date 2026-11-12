@@ -94,6 +94,13 @@ jobs:
               }
               if (p.state.executed) { fix() } else { p.afterEvaluate { fix() } }
           }
+          // The release lint check ("lintVital…") crashes on newer build tools inside plugins
+          // (e.g. url_launcher_android). It only reports warnings, so it's switched off.
+          allprojects { pr ->
+              pr.tasks.configureEach { t ->
+                  if (t.name.startsWith('lintVital')) { t.enabled = false }
+              }
+          }
           GR
           python3 - <<'PY'
           import glob
