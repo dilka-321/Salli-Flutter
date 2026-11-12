@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../core/currency.dart';
 import '../core/currency_table.dart';
@@ -29,38 +30,74 @@ class AccountsScreen extends StatelessWidget {
         onPressed: () => _addChooser(context),
         child: const Icon(Icons.add_rounded, size: 30),
       ),
-      body: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 110), children: [
-        GlassCard(
-          gradient: LinearGradient(colors: [Color.alphaBlend(p.accent.withOpacity(.18), p.card), p.card]),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('All Accounts Balance', style: TextStyle(color: p.muted)),
-            const SizedBox(height: 4),
-            FittedBox(fit: BoxFit.scaleDown, child: Text(money(s.totalBalance, s.base), style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800))),
-            Text('${s.wallets.length} accounts · main currency ${s.base}', style: TextStyle(color: p.muted, fontSize: 13)),
+      body: CustomScrollView(slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+          sliver: SliverList.list(children: [
+            GlassCard(
+              gradient: LinearGradient(colors: [Color.alphaBlend(p.accent.withOpacity(.18), p.card), p.card]),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('All Accounts Balance', style: TextStyle(color: p.muted)),
+                const SizedBox(height: 4),
+                FittedBox(fit: BoxFit.scaleDown, child: Text(money(s.totalBalance, s.base), style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800))),
+                Text('${s.wallets.length} accounts · main currency ${s.base}', style: TextStyle(color: p.muted, fontSize: 13)),
+                Text('Long press a card to set as default · drag ☰ to reorder', style: TextStyle(color: p.muted, fontSize: 12)),
+              ]),
+            ),
+            const SectionTitle('Wallets & bank accounts'),
+            if (s.wallets.isEmpty) const EmptyNote('No accounts yet. Tap + to add one.'),
           ]),
         ),
-        const SectionTitle('Wallets & bank accounts'),
-        if (s.wallets.isEmpty) const EmptyNote('No accounts yet. Tap + to add one.'),
-        for (final a in s.wallets) ...[
-          _AccCard(a: a),
-          const SizedBox(height: 10),
-        ],
-        ...[
-          SectionTitle('Credit cards', action: 'Add card', onAction: () => showCardSheet(context)),
-          if (s.cards.isEmpty) const EmptyNote('No credit cards added.', icon: Icons.credit_card_off_outlined),
-          for (final a in s.cards) ...[
-            _AccCard(a: a),
-            const SizedBox(height: 10),
-          ],
-        ],
+        // wallets: drag the ☰ handle to change their order (used everywhere accounts are listed)
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          sliver: SliverReorderableList(
+            itemCount: s.wallets.length,
+            proxyDecorator: (child, i, a) => AnimatedBuilder(
+              animation: a,
+              builder: (_, ch) => Transform.scale(scale: 1 + .03 * Curves.easeOut.transform(a.value), child: Material(type: MaterialType.transparency, child: ch)),
+              child: child,
+            ),
+            onReorder: (from, to) {
+              final w = [...s.wallets];
+              if (to > from) to -= 1;
+              w.insert(to, w.removeAt(from));
+              final others = s.accounts.where((a) => s.isCard(a)).toList();
+              final list = s.data['accounts'] as List;
+              list
+                ..clear()
+                ..addAll(w)
+                ..addAll(others);
+              s.commit();
+            },
+            itemBuilder: (_, i) {
+              final a = s.wallets[i];
+              return Padding(key: ValueKey('acc_${a['id']}'), padding: const EdgeInsets.only(bottom: 10), child: _AccCard(a: a, index: i));
+            },
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 110),
+          sliver: SliverList.list(children: [
+            SectionTitle('Credit cards', action: 'Add card', onAction: () => showCardSheet(context)),
+            if (s.cards.isEmpty) const EmptyNote('No credit cards added.', icon: Icons.credit_card_off_outlined),
+            for (final a in s.cards) ...[
+              _AccCard(a: a),
+              const SizedBox(height: 10),
+            ],
+          ]),
+        ),
       ]),
     );
   }
 }
 
 class _AccCard extends StatelessWidget {
-  const _AccCard({required this.a});
+  const _AccCard({required this.a, this.index});
   final J a;
+
+  /// position in the reorderable wallet list (null for credit cards)
+  final int? index;
   @override
   Widget build(BuildContext context) {
     final s = StoreScope.of(context);
@@ -69,7 +106,7 @@ class _AccCard extends StatelessWidget {
     final bal = s.accBal(a);
     final card = s.isCard(a);
     final limit = toD(a['limit']);
-    return GlassCard(
+    final body = GlassCard(
       onTap: () => card ? Navigator.of(context).push(pageRoute(CardScreen(id: '${a['id']}'))) : _accountActions(context, a),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
@@ -96,7 +133,13 @@ class _AccCard extends StatelessWidget {
               ]),
             ]),
           ),
-          Icon(Icons.chevron_right_rounded, color: p.muted),
+          if (index != null)
+            ReorderableDragStartListener(
+              index: index!,
+              child: Padding(padding: const EdgeInsets.all(6), child: Icon(Icons.drag_handle_rounded, color: p.muted)),
+            )
+          else
+            Icon(Icons.chevron_right_rounded, color: p.muted),
         ]),
         const SizedBox(height: 12),
         Text(card ? 'Available' : 'Balance', style: TextStyle(color: p.muted, fontSize: 12.5)),
@@ -112,7 +155,52 @@ class _AccCard extends StatelessWidget {
           Text('Used ${money(limit - bal, cur)} of ${money(limit, cur)}', style: TextStyle(color: p.muted, fontSize: 12)),
         ],
         if (a['include'] == false) Text('Not included in total balance', style: TextStyle(color: p.muted, fontSize: 12)),
+        if (!card) ...[
+          const SizedBox(height: 10),
+          Row(children: [
+            Material(
+              color: Colors.transparent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: p.line)),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () => _correctBalanceSheet(context, a),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.tune_rounded, size: 15, color: p.muted),
+                    const SizedBox(width: 6),
+                    Text('Balance Re-correction', style: TextStyle(color: p.fg.withOpacity(.85), fontSize: 12)),
+                  ]),
+                ),
+              ),
+            ),
+            const Spacer(),
+            Text('Include', style: TextStyle(color: p.muted, fontSize: 12.5)),
+            const SizedBox(width: 4),
+            Switch(
+              value: a['include'] != false,
+              onChanged: (v) {
+                a['include'] = v;
+                s.commit();
+                toast(context, v ? '${a['name']} is included in the total balance' : '${a['name']} is not included in the total balance');
+              },
+            ),
+          ]),
+        ],
       ]),
+    );
+    if (card) return body;
+    // long press → set as default wallet
+    return GestureDetector(
+      onLongPress: () {
+        HapticFeedback.mediumImpact();
+        for (final w in s.wallets) {
+          w['isDefault'] = w['id'] == a['id'];
+        }
+        s.commit();
+        toast(context, '${a['name']} is now your default wallet');
+      },
+      child: body,
     );
   }
 }

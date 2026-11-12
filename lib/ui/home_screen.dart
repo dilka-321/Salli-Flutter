@@ -5,6 +5,7 @@ import '../core/store.dart';
 import '../core/util.dart';
 import 'accounts_screen.dart';
 import 'card_screen.dart';
+import 'cashflow_screen.dart';
 import 'due_soon.dart';
 import 'home_widgets.dart';
 import '../core/round6.dart';
@@ -86,6 +87,7 @@ class HomeScreen extends StatelessWidget {
                     'balance' => Padding(
                         padding: const EdgeInsets.only(bottom: 14),
                         child: GlassCard(
+                onTap: () => showNetCashFlowSheet(context),
                 gradient: LinearGradient(
                   begin: Alignment.topRight,
                   end: Alignment.bottomLeft,
@@ -103,9 +105,19 @@ class HomeScreen extends StatelessWidget {
                   Text('${fmtDate(monthStart(mk))} – ${fmtDate(monthEnd(mk))}', style: TextStyle(color: p.muted, fontSize: 13)),
                   const SizedBox(height: 16),
                   Row(children: [
-                    Expanded(child: _Mini(label: 'Cash In', value: money(st.cin, s.base), color: p.pos, icon: Icons.arrow_upward_rounded, sub: 'Income ${money(st.inc, s.base)}')),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => Navigator.of(context).push(pageRoute(const CashFlowTxnsScreen(mode: 'cashin'))),
+                        child: _Mini(label: 'Cash In', value: money(st.cin, s.base), color: p.pos, icon: Icons.arrow_upward_rounded, sub: 'Income ${money(st.inc, s.base)}'),
+                      ),
+                    ),
                     const SizedBox(width: 12),
-                    Expanded(child: _Mini(label: 'Cash Out', value: money(st.cout, s.base), color: p.neg, icon: Icons.arrow_downward_rounded, sub: 'Expense ${money(st.exp, s.base)}')),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => Navigator.of(context).push(pageRoute(const CashFlowTxnsScreen(mode: 'cashout'))),
+                        child: _Mini(label: 'Cash Out', value: money(st.cout, s.base), color: p.neg, icon: Icons.arrow_downward_rounded, sub: 'Expense ${money(st.exp, s.base)}'),
+                      ),
+                    ),
                   ]),
                 ]),
               ),
@@ -145,11 +157,15 @@ class HomeScreen extends StatelessWidget {
 
 
 Widget _accountsCard(BuildContext context, AppStore s, Palette p) => GlassCard(
-                onTap: () => Navigator.of(context).push(pageRoute(const AccountsScreen())),
+                onTap: () => _showAllBalancesSheet(context),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Row(children: [
                     const Expanded(child: Text('My Accounts', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800))),
-                    Text('See all', style: TextStyle(color: p.accent, fontWeight: FontWeight.w600)),
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => Navigator.of(context).push(pageRoute(const AccountsScreen())),
+                      child: Padding(padding: const EdgeInsets.fromLTRB(12, 4, 0, 4), child: Text('See all', style: TextStyle(color: p.accent, fontWeight: FontWeight.w600))),
+                    ),
                   ]),
                   const SizedBox(height: 10),
                   Text('All Accounts Balance', style: TextStyle(color: p.muted, fontSize: 13)),
@@ -169,6 +185,50 @@ Widget _accountsCard(BuildContext context, AppStore s, Palette p) => GlassCard(
                   ],
                 ]),
               );
+
+/// My Accounts card tap → every included account's balance (in the main currency) and the total.
+void _showAllBalancesSheet(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (c) {
+      final s = StoreScope.of(c);
+      final p = Palette.of(c);
+      final L = s.wallets.where((a) => a['include'] != false).toList();
+      final tot = s.totalBalance;
+      return ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(c).size.height * .8),
+        child: SafeArea(
+          child: ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(20, 0, 20, 16), children: [
+            Text('All Accounts Balance', style: TextStyle(color: p.muted, fontSize: 13)),
+            FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(money(tot, s.base), style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: tot < 0 ? p.neg : p.fg))),
+            Divider(color: p.line, height: 28),
+            for (final a in L)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 7),
+                child: Row(children: [
+                  CircleAvatar(
+                    radius: 15,
+                    backgroundColor: p.accent.withOpacity(.14),
+                    child: Text('${a['name']}'.isEmpty ? '?' : '${a['name']}'[0].toUpperCase(), style: TextStyle(color: p.accent, fontSize: 12.5, fontWeight: FontWeight.w800)),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text('${a['name']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600))),
+                  Text(money(s.accBalBase(a), s.base), style: TextStyle(fontWeight: FontWeight.w700, color: s.accBalBase(a) < 0 ? p.neg : p.pos)),
+                ]),
+              ),
+            Divider(color: p.line, height: 28),
+            Row(children: [
+              const Expanded(child: Text('Total', style: TextStyle(fontWeight: FontWeight.w800))),
+              Text(money(tot, s.base), style: TextStyle(fontWeight: FontWeight.w800, color: tot < 0 ? p.neg : p.pos)),
+            ]),
+          ]),
+        ),
+      );
+    },
+  );
+}
 
 /// Horizontally scrolling account tiles under My Accounts (tap to see that account's transactions).
 class _AccountTiles extends StatelessWidget {

@@ -10,7 +10,13 @@ This is the native rebuild of the Salli money manager. It signs in to **the same
 
 If a build turns red: open the failed step, copy the red error lines (or screenshot them) and send them to Claude to fix.
 
-## 2.0.9 (this version)
+## 2.1.0 (this version)
+- **Home → Net Cash Flow card:** tap it for the breakdown (Cash In, Cash Out, Net Cash Flow).
+- **Home → Cash In / Cash Out:** tap either to open "Cash In Transactions" / "Cash Out Transactions" grouped by day, with a **Filters** button (badge shows how many are on): Date Range (All time, or month + year), Mode (All, Income, Expense, Cash In, Cash Out), name, amount and categories (multi-select with search). The page title follows the mode.
+- **Home → My Accounts card:** tap it for "All Accounts Balance" — every included account in the main currency and the total. "See all" still opens My Accounts.
+- **My Accounts page:** each wallet now has **Balance Re-correction**, an **Include** switch (include / leave out of the total balance), a ☰ handle to **drag and reorder**, and **long press** to set it as the default wallet.
+
+## 2.0.9
 - **Agreed exchange rates (loans & lendings):** when the loan / lending isn't in USD, other currencies are entered against USD (e.g. on an LKR loan: "1 USD = x LKR" and "1 USD = x MVR"). The MVR ⇄ LKR rate is worked out automatically from those two (if the USD row is empty, the app's USD rate is used).
 - **Lendings — settle against expenses:** now has the same currency button as Cash settle. Changing it converts the amount using the lending's agreed rate first (else the app rate) and shows how much comes off the balance.
 
