@@ -32,7 +32,7 @@ void showNetCashFlowSheet(BuildContext context) {
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Text('Net Cash Flow', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
             const SizedBox(height: 2),
-            Text('Excludes loan disbursements and wallet transfers.', style: TextStyle(color: p.muted, fontSize: 12.5)),
+            Text('Includes money received from loans. Excludes wallet transfers.', style: TextStyle(color: p.muted, fontSize: 12.5)),
             const SizedBox(height: 14),
             row('Cash In', st.cin, p.pos),
             row('Cash Out', st.cout, p.neg),

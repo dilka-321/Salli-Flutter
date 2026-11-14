@@ -10,7 +10,10 @@ This is the native rebuild of the Salli money manager. It signs in to **the same
 
 If a build turns red: open the failed step, copy the red error lines (or screenshot them) and send them to Claude to fix.
 
-## 2.1.0 (this version)
+## 2.1.1 (this version)
+- **Cash In:** money received when you take a loan (into an account) now counts in Home → Cash In, the Net Cash Flow breakdown, the Cash In transactions list and the trend chart's Cash In line. Income totals are unchanged (a loan is not income).
+
+## 2.1.0
 - **Home → Net Cash Flow card:** tap it for the breakdown (Cash In, Cash Out, Net Cash Flow).
 - **Home → Cash In / Cash Out:** tap either to open "Cash In Transactions" / "Cash Out Transactions" grouped by day, with a **Filters** button (badge shows how many are on): Date Range (All time, or month + year), Mode (All, Income, Expense, Cash In, Cash Out), name, amount and categories (multi-select with search). The page title follows the mode.
 - **Home → My Accounts card:** tap it for "All Accounts Balance" — every included account in the main currency and the total. "See all" still opens My Accounts.

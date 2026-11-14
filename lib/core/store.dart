@@ -461,7 +461,7 @@ class AppStore extends ChangeNotifier with WidgetsBindingObserver {
   static const _statExp = ['normal', 'recurring', 'sub', 'inst', 'bank_fee', 'fx_loss'];
   bool isInc(J t) => t['type'] == 'income' && _statInc.contains(t['kind'] ?? 'normal');
   bool isExp(J t) => t['type'] == 'expense' && _statExp.contains(t['kind'] ?? 'normal');
-  bool isCashIn(J t) => t['type'] == 'income' && !['initial', 'correction', 'transfer_in', 'loan_receive', 'lend_offset'].contains(t['kind']);
+  bool isCashIn(J t) => t['type'] == 'income' && !['initial', 'correction', 'transfer_in', 'lend_offset'].contains(t['kind']); // money from a loan you take counts as Cash In
   bool isCashOut(J t) => t['type'] == 'expense' && !['initial', 'correction', 'transfer_out'].contains(t['kind']);
 
   // ---- loans: their own agreed exchange rates (same as the web app)
