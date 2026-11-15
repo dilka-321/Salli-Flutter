@@ -16,7 +16,11 @@ const kAccents = <String, (Color, Color)>{
 /// Colours used across the app (true black in dark mode).
 class Palette extends ThemeExtension<Palette> {
   final Color bg, card, card2, line, fg, muted, accent, accentInk, pos, neg, warn;
+
+  /// true for the warm frosted-glass look (translucent cards over a soft warm backdrop)
+  final bool glass;
   const Palette({
+    this.glass = false,
     required this.bg,
     required this.card,
     required this.card2,
@@ -39,11 +43,30 @@ class Palette extends ThemeExtension<Palette> {
   Palette lerp(ThemeExtension<Palette>? other, double t) => other is Palette && t > .5 ? other : this;
 }
 
-ThemeData buildTheme(Brightness b, String accentId) {
+/// Coral accent of the glass look.
+const kGlassAccent = Color(0xFFE2553A);
+
+ThemeData buildTheme(Brightness b, String accentId, {bool glass = false}) {
+  if (glass) b = Brightness.light;
   final dark = b == Brightness.dark;
   final tones = kAccents[accentId] ?? kAccents['emerald']!;
-  final accent = dark ? tones.$2 : tones.$1;
-  final p = dark
+  final accent = glass ? kGlassAccent : (dark ? tones.$2 : tones.$1);
+  final p = glass
+      ? const Palette(
+          glass: true,
+          bg: Color(0xFFF4E6DF),
+          card: Color(0xBFFFFFFF),
+          card2: Color(0x8CFFFFFF),
+          line: Color(0x1F6B3A2C),
+          fg: Color(0xFF2A1C18),
+          muted: Color(0xFF86675E),
+          accent: kGlassAccent,
+          accentInk: Colors.white,
+          pos: Color(0xFF1E9A60),
+          neg: Color(0xFFD23F31),
+          warn: Color(0xFFC07300),
+        )
+      : dark
       ? Palette(
           bg: Colors.black,
           card: const Color(0xFF111214),
@@ -78,12 +101,18 @@ ThemeData buildTheme(Brightness b, String accentId) {
     error: p.neg,
   );
   final base = ThemeData(useMaterial3: true, colorScheme: scheme, brightness: b);
+  const sheet = Color(0xFFFBF2EE);
   return base.copyWith(
-    scaffoldBackgroundColor: p.bg,
+    scaffoldBackgroundColor: glass ? Colors.transparent : p.bg,
+    canvasColor: glass ? sheet : null,
+    dialogTheme: glass ? const DialogThemeData(backgroundColor: sheet, surfaceTintColor: Colors.transparent) : null,
+    popupMenuTheme: glass ? const PopupMenuThemeData(color: sheet, surfaceTintColor: Colors.transparent) : null,
+    drawerTheme: glass ? const DrawerThemeData(backgroundColor: sheet, surfaceTintColor: Colors.transparent) : null,
+    chipTheme: glass ? ChipThemeData(backgroundColor: p.card2, side: BorderSide(color: Colors.white.withOpacity(.7)), shape: const StadiumBorder()) : null,
     extensions: [p],
     textTheme: base.textTheme.apply(bodyColor: p.fg, displayColor: p.fg),
     appBarTheme: AppBarTheme(
-      backgroundColor: p.bg,
+      backgroundColor: glass ? Colors.transparent : p.bg,
       surfaceTintColor: Colors.transparent,
       foregroundColor: p.fg,
       elevation: 0,
@@ -120,14 +149,14 @@ ThemeData buildTheme(Brightness b, String accentId) {
       ),
     ),
     bottomSheetTheme: BottomSheetThemeData(
-      backgroundColor: dark ? const Color(0xFF0E0E10) : Colors.white,
+      backgroundColor: glass ? sheet : (dark ? const Color(0xFF0E0E10) : Colors.white),
       surfaceTintColor: Colors.transparent,
       showDragHandle: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: dark ? const Color(0xFF1E2023) : const Color(0xFF15191E),
+      backgroundColor: glass ? const Color(0xFF3A241E) : (dark ? const Color(0xFF1E2023) : const Color(0xFF15191E)),
       contentTextStyle: const TextStyle(color: Colors.white),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
     ),
@@ -135,4 +164,44 @@ ThemeData buildTheme(Brightness b, String accentId) {
       TargetPlatform.android: ZoomPageTransitionsBuilder(),
     }),
   );
+}
+
+
+/// Soft warm backdrop behind every page in the glass look (blurred-room feel: warm gradient + glowing blobs).
+class GlassBackdrop extends StatelessWidget {
+  const GlassBackdrop({super.key, required this.child});
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFEBD3C7), Color(0xFFF6EAE3), Color(0xFFE6C9BB), Color(0xFFD9B3A2)],
+          stops: [0, .35, .7, 1],
+        ),
+      ),
+      child: Stack(children: [
+        const Positioned(top: -120, right: -90, child: _Blob(size: 320, color: Color(0x55F08A6C))),
+        const Positioned(bottom: 80, left: -120, child: _Blob(size: 340, color: Color(0x40FFFFFF))),
+        const Positioned(bottom: -140, right: -60, child: _Blob(size: 300, color: Color(0x40C9785E))),
+        Positioned.fill(child: child),
+      ]),
+    );
+  }
+}
+
+class _Blob extends StatelessWidget {
+  const _Blob({required this.size, required this.color});
+  final double size;
+  final Color color;
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [color, color.withOpacity(0)])),
+        ),
+      );
 }

@@ -39,15 +39,24 @@ class _GlassCardState extends State<GlassCard> {
     final onTap = widget.onTap;
     final box = Container(
       margin: widget.margin,
-      decoration: BoxDecoration(
-        color: widget.gradient == null ? p.card : null,
-        gradient: widget.gradient,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: p.line),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(dark ? .5 : .07), blurRadius: 30, offset: const Offset(0, 14), spreadRadius: -14),
-        ],
-      ),
+      decoration: p.glass
+          // frosted glass: milky white, bright rim, soft warm shadow
+          ? BoxDecoration(
+              gradient: widget.gradient ??
+                  const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xD9FFFFFF), Color(0x99FFFFFF)]),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white.withOpacity(.75), width: 1.2),
+              boxShadow: [BoxShadow(color: const Color(0xFF7A3B26).withOpacity(.14), blurRadius: 28, offset: const Offset(0, 12), spreadRadius: -12)],
+            )
+          : BoxDecoration(
+              color: widget.gradient == null ? p.card : null,
+              gradient: widget.gradient,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: p.line),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(dark ? .5 : .07), blurRadius: 30, offset: const Offset(0, 14), spreadRadius: -14),
+              ],
+            ),
       child: Material(
         type: MaterialType.transparency,
         child: InkWell(
@@ -227,7 +236,8 @@ void toast(BuildContext c, String msg) {
 Route<T> pageRoute<T>(Widget page) => PageRouteBuilder<T>(
       transitionDuration: const Duration(milliseconds: 300),
       reverseTransitionDuration: const Duration(milliseconds: 250),
-      pageBuilder: (_, __, ___) => page,
+      // glass look: each page carries the warm backdrop, so pages never show through each other while sliding
+      pageBuilder: (c, __, ___) => Palette.of(c).glass ? GlassBackdrop(child: page) : page,
       transitionsBuilder: (_, a, sa, child) {
         final move = CurvedAnimation(parent: a, curve: Curves.fastOutSlowIn, reverseCurve: Curves.easeInCubic);
         // fade only during the first part so the page is fully solid sooner (less work for the GPU)
@@ -245,3 +255,18 @@ Route<T> pageRoute<T>(Widget page) => PageRouteBuilder<T>(
         );
       },
     );
+
+/// Money that counts up smoothly to its value (and glides when the value changes).
+class CountUpMoney extends StatelessWidget {
+  const CountUpMoney(this.value, this.cur, {super.key, this.style});
+  final double value;
+  final String cur;
+  final TextStyle? style;
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0, end: value),
+        duration: const Duration(milliseconds: 900),
+        curve: Curves.easeOutCubic,
+        builder: (_, v, __) => Text(money(v, cur), style: style),
+      );
+}

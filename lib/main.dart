@@ -36,13 +36,15 @@ class SalliApp extends StatelessWidget {
         final acc = set is Map ? set['accent'] : null;
         final accentId = acc is Map ? '${acc['id'] ?? 'emerald'}' : (acc is String ? acc : 'emerald');
         final mode = themeName == 'dark' ? ThemeMode.dark : themeName == 'light' ? ThemeMode.light : ThemeMode.system;
+        // warm frosted-glass look (Settings → Appearance → Glass style); on unless switched off
+        final glass = !(set is Map && set['uiGlass'] == false);
         return MaterialApp(
           title: AppConfig.appName,
           debugShowCheckedModeBanner: false,
           navigatorKey: rootNavKey,
-          themeMode: mode,
-          theme: buildTheme(Brightness.light, accentId),
-          darkTheme: buildTheme(Brightness.dark, accentId),
+          themeMode: glass ? ThemeMode.light : mode,
+          theme: buildTheme(Brightness.light, accentId, glass: glass),
+          darkTheme: buildTheme(Brightness.dark, accentId, glass: glass),
           builder: (context, child) {
             final dark = Theme.of(context).brightness == Brightness.dark;
             return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -53,7 +55,7 @@ class SalliApp extends StatelessWidget {
               child: MediaQuery(
                 data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(MediaQuery.of(context).textScaler.scale(14) / 14 * _fontScale(set))),
                 // lock screen / privacy cover sit above every open page, so your place is kept underneath
-                child: _NavBarSafe(child: KeyboardRefresher(child: LockGuard(child: child ?? const SizedBox.shrink()))),
+                child: _wrapGlass(glass, _NavBarSafe(child: KeyboardRefresher(child: LockGuard(child: child ?? const SizedBox.shrink())))),
               ),
             );
           },
@@ -63,6 +65,8 @@ class SalliApp extends StatelessWidget {
     );
   }
 }
+
+Widget _wrapGlass(bool glass, Widget child) => glass ? GlassBackdrop(child: child) : child;
 
 /// Phone navigation bar:
 /// - 3-button bar → every page (and bottom sheet) stops above the buttons, so nothing hides under them;

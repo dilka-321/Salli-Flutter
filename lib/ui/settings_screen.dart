@@ -193,6 +193,28 @@ class SettingsScreen extends StatelessWidget {
           selected: {theme},
           onSelectionChanged: (v) => s.setTheme(v.first),
         ),
+        const SizedBox(height: 10),
+        GlassCard(
+          padding: const EdgeInsets.fromLTRB(16, 6, 8, 6),
+          child: Row(children: [
+            Icon(Icons.blur_on_rounded, color: p.accent),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Glass style', style: TextStyle(fontWeight: FontWeight.w700)),
+                Text('Warm frosted look. Turn off to use Light / Dark / System and your accent colour.', style: TextStyle(color: p.muted, fontSize: 12)),
+              ]),
+            ),
+            Switch(
+              value: s.settings['uiGlass'] != false,
+              onChanged: (v) {
+                HapticFeedback.selectionClick();
+                s.settings['uiGlass'] = v;
+                s.commit();
+              },
+            ),
+          ]),
+        ),
         _sec(p, 'Accent Color'),
         GlassCard(
           child: Wrap(spacing: 12, runSpacing: 12, children: [

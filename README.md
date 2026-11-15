@@ -10,7 +10,10 @@ This is the native rebuild of the Salli money manager. It signs in to **the same
 
 If a build turns red: open the failed step, copy the red error lines (or screenshot them) and send them to Claude to fix.
 
-## 2.1.1 (this version)
+## 2.2.0 (this version)
+- **New look — Glass style:** warm frosted design like the reference video: soft warm backdrop behind every page, milky translucent cards with bright edges and soft shadows, coral accent, a coral "Net Cash Flow" hero card on Home, and numbers that count up smoothly (Net Cash Flow, Cash In, Cash Out, All Accounts Balance). It's on by default; **Settings → Appearance → Glass style** turns it off to go back to Light / Dark / System with your accent colour. Only the look changed — every feature works the same.
+
+## 2.1.1
 - **Cash In:** money received when you take a loan (into an account) now counts in Home → Cash In, the Net Cash Flow breakdown, the Cash In transactions list and the trend chart's Cash In line. Income totals are unchanged (a loan is not income).
 
 ## 2.1.0

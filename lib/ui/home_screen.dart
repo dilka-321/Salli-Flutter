@@ -88,34 +88,37 @@ class HomeScreen extends StatelessWidget {
                         padding: const EdgeInsets.only(bottom: 14),
                         child: GlassCard(
                 onTap: () => showNetCashFlowSheet(context),
-                gradient: LinearGradient(
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                  colors: [Color.alphaBlend(p.accent.withOpacity(.16), p.card), p.card],
-                ),
+                gradient: p.glass
+                    // glass look: warm coral hero card
+                    ? const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xF2F0785C), Color(0xF2D9442E)])
+                    : LinearGradient(
+                        begin: Alignment.topRight,
+                        end: Alignment.bottomLeft,
+                        colors: [Color.alphaBlend(p.accent.withOpacity(.16), p.card), p.card],
+                      ),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Net Cash Flow', style: TextStyle(color: p.muted, fontSize: 15)),
+                  Text('Net Cash Flow', style: TextStyle(color: p.glass ? Colors.white.withOpacity(.85) : p.muted, fontSize: 15)),
                   const SizedBox(height: 6),
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
-                    child: Text(money(net, s.base), style: TextStyle(fontSize: 34, fontWeight: FontWeight.w800, color: net < 0 ? p.neg : p.fg, letterSpacing: -.5)),
+                    child: CountUpMoney(net, s.base, style: TextStyle(fontSize: 34, fontWeight: FontWeight.w800, color: p.glass ? Colors.white : (net < 0 ? p.neg : p.fg), letterSpacing: -.5)),
                   ),
                   const SizedBox(height: 4),
-                  Text('${fmtDate(monthStart(mk))} – ${fmtDate(monthEnd(mk))}', style: TextStyle(color: p.muted, fontSize: 13)),
+                  Text('${fmtDate(monthStart(mk))} – ${fmtDate(monthEnd(mk))}', style: TextStyle(color: p.glass ? Colors.white.withOpacity(.8) : p.muted, fontSize: 13)),
                   const SizedBox(height: 16),
                   Row(children: [
                     Expanded(
                       child: GestureDetector(
                         onTap: () => Navigator.of(context).push(pageRoute(const CashFlowTxnsScreen(mode: 'cashin'))),
-                        child: _Mini(label: 'Cash In', value: money(st.cin, s.base), color: p.pos, icon: Icons.arrow_upward_rounded, sub: 'Income ${money(st.inc, s.base)}'),
+                        child: _Mini(label: 'Cash In', value: money(st.cin, s.base), amount: st.cin, cur: s.base, color: p.pos, icon: Icons.arrow_upward_rounded, sub: 'Income ${money(st.inc, s.base)}'),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: GestureDetector(
                         onTap: () => Navigator.of(context).push(pageRoute(const CashFlowTxnsScreen(mode: 'cashout'))),
-                        child: _Mini(label: 'Cash Out', value: money(st.cout, s.base), color: p.neg, icon: Icons.arrow_downward_rounded, sub: 'Expense ${money(st.exp, s.base)}'),
+                        child: _Mini(label: 'Cash Out', value: money(st.cout, s.base), amount: st.cout, cur: s.base, color: p.neg, icon: Icons.arrow_downward_rounded, sub: 'Expense ${money(st.exp, s.base)}'),
                       ),
                     ),
                   ]),
@@ -172,7 +175,7 @@ Widget _accountsCard(BuildContext context, AppStore s, Palette p) => GlassCard(
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
-                    child: Text(money(s.totalBalance, s.base), style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: -.4)),
+                    child: CountUpMoney(s.totalBalance, s.base, style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: -.4)),
                   ),
                   if (s.cards.isNotEmpty) ...[
                     Divider(height: 22, color: p.line),
@@ -298,8 +301,10 @@ class _SyncChip extends StatelessWidget {
 }
 
 class _Mini extends StatelessWidget {
-  const _Mini({required this.label, required this.value, required this.color, required this.icon, required this.sub});
+  const _Mini({required this.label, required this.value, required this.color, required this.icon, required this.sub, this.amount, this.cur});
   final String label, value, sub;
+  final double? amount;
+  final String? cur;
   final Color color;
   final IconData icon;
   @override
@@ -307,7 +312,9 @@ class _Mini extends StatelessWidget {
     final p = Palette.of(context);
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: p.card2, borderRadius: BorderRadius.circular(18), border: Border.all(color: p.line)),
+      decoration: p.glass
+          ? BoxDecoration(color: Colors.white.withOpacity(.88), borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white), boxShadow: [BoxShadow(color: Colors.black.withOpacity(.08), blurRadius: 14, offset: const Offset(0, 6))])
+          : BoxDecoration(color: p.card2, borderRadius: BorderRadius.circular(18), border: Border.all(color: p.line)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
           width: 36,
@@ -317,7 +324,13 @@ class _Mini extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Text(label, style: TextStyle(color: p.muted, fontSize: 13)),
-        FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(value, style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.w800))),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: amount != null && cur != null
+              ? CountUpMoney(amount!, cur!, style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.w800))
+              : Text(value, style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.w800)),
+        ),
         const SizedBox(height: 4),
         Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: p.muted, fontSize: 11.5)),
       ]),
