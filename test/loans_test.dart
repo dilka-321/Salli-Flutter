@@ -75,6 +75,20 @@ void main() {
     expect(s.lendRemain(x), 50);
   });
 
+  test('lending entries are shown in the main currency at the lending agreed rate', () {
+    final id = s.saveLending(name: 'Dilka', currency: 'LKR', amount: 1000, accId: 'mv', due: '2026-12-01', note: '', rates: {'MVR': 0.05}, rateDir: {'MVR': true});
+    final give = s.txns.single;
+    expect(give['amount'], 50); // 1000 LKR at 1 MVR = 20 LKR
+    expect(s.tBase(give), 1000);
+    s.receiveLending(id, v: 10, cur: 'MVR', accId: 'mv', date: today(), note: '');
+    final rec = s.txns.firstWhere((t) => t['kind'] == 'lend_receive');
+    expect(s.tBase(rec), 200);
+    s.settleLendingAgainstExpense(id, v: 5, cur: 'MVR', catId: 'bc', date: today(), note: '');
+    final e = s.txns.firstWhere((t) => t['catId'] == 'bc');
+    expect(s.tBase(e), 100);
+    expect(s.tBase(s.txns.firstWhere((t) => t['kind'] == 'lend_offset')), 100);
+  });
+
   test('settle lending against an expense: lending goes down, expense booked, balance unchanged', () {
     final id = s.saveLending(name: 'Ali', currency: 'LKR', amount: 5000, accId: 'lk', due: '2026-12-01', note: '');
     final x = s.lending(id)!;

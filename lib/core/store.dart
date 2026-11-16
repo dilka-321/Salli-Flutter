@@ -482,6 +482,25 @@ class AppStore extends ChangeNotifier with WidgetsBindingObserver {
 
   J? _loanOfTx(J t) {
     final k = t['kind'];
+    // lendings: their own agreed rates are used for the lend / receive / settle-as-expense entries too
+    final link = t['link'];
+    final lid = link is Map ? (link['lend'] ?? link['lendExp'])?.toString() : null;
+    if (lid != null || k == 'lend_give' || k == 'lend_receive' || k == 'lend_offset') {
+      final L = data['lendings'];
+      if (L is List) {
+        for (final x in L) {
+          if (x is! Map<String, dynamic>) continue;
+          final rr = x['rates'];
+          if (rr is! Map || rr.isEmpty) continue;
+          if (lid != null && x['id'] == lid) return x;
+          final pays = (x['payments'] as List?) ?? const [];
+          for (final p in pays) {
+            if (p is Map && (p['txId'] == t['id'] || p['expTxId'] == t['id'])) return x;
+          }
+        }
+      }
+      return null;
+    }
     if (k != 'loan_receive' && k != 'loan_pay' && k != 'bank_fee') return null;
     for (final l in loans) {
       final rr = l['rates'];

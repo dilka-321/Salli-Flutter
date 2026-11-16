@@ -144,48 +144,51 @@ class _ShellState extends State<Shell> {
         ),
         child: KeyedSubtree(key: ValueKey(tab), child: pages[tab]),
       ),
-      bottomNavigationBar: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-          child: Container(
-            decoration: BoxDecoration(color: p.bg.withOpacity(.82), border: Border(top: BorderSide(color: p.line))),
-            child: SafeArea(
-              top: false,
-              child: SizedBox(
-                height: 70,
-                child: Row(children: [
-                  _NavBtn(icon: Icons.home_rounded, label: 'Home', on: tab == 0, onTap: () => _go(0)),
-                  _NavBtn(icon: Icons.receipt_long_rounded, label: 'Budget', on: tab == 1, onTap: () => _go(1)),
-                  SizedBox(
-                    width: 84,
-                    child: Center(
-                      child: Transform.translate(
-                        offset: const Offset(0, -14),
-                        child: GestureDetector(
-                          onTap: _quickAdd,
-                          child: Container(
-                            width: 62,
-                            height: 62,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color.lerp(p.accent, Colors.white, .15)!, p.accent]),
-                              border: Border.all(color: p.bg, width: 5),
-                              boxShadow: [BoxShadow(color: p.accent.withOpacity(.45), blurRadius: 24, offset: const Offset(0, 10), spreadRadius: -6)],
-                            ),
-                            child: Icon(Icons.add_rounded, size: 32, color: p.accentInk),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  _NavBtn(icon: Icons.bar_chart_rounded, label: 'Analytics', on: tab == 2, onTap: () => _go(2)),
-                  _NavBtn(icon: Icons.description_rounded, label: 'Reports', on: tab == 3, onTap: () => _go(3)),
-                ]),
-              ),
+      // The blur is clipped to the bar, but the + button may rise above it without being cut off.
+      bottomNavigationBar: Stack(clipBehavior: Clip.none, children: [
+        Positioned.fill(
+          child: ClipRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: DecoratedBox(decoration: BoxDecoration(color: p.bg.withOpacity(.82), border: Border(top: BorderSide(color: p.line)))),
             ),
           ),
         ),
-      ),
+        SafeArea(
+          top: false,
+          child: SizedBox(
+            height: 70,
+            child: Row(children: [
+              _NavBtn(icon: Icons.home_rounded, label: 'Home', on: tab == 0, onTap: () => _go(0)),
+              _NavBtn(icon: Icons.receipt_long_rounded, label: 'Budget', on: tab == 1, onTap: () => _go(1)),
+              SizedBox(
+                width: 84,
+                child: Center(
+                  child: Transform.translate(
+                    offset: const Offset(0, -20),
+                    child: GestureDetector(
+                      onTap: _quickAdd,
+                      child: Container(
+                        width: 62,
+                        height: 62,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color.lerp(p.accent, Colors.white, .15)!, p.accent]),
+                          border: Border.all(color: p.bg, width: 5),
+                          boxShadow: [BoxShadow(color: p.accent.withOpacity(.45), blurRadius: 24, offset: const Offset(0, 10), spreadRadius: -6)],
+                        ),
+                        child: Icon(Icons.add_rounded, size: 32, color: p.accentInk),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              _NavBtn(icon: Icons.bar_chart_rounded, label: 'Analytics', on: tab == 2, onTap: () => _go(2)),
+              _NavBtn(icon: Icons.description_rounded, label: 'Reports', on: tab == 3, onTap: () => _go(3)),
+            ]),
+          ),
+        ),
+      ]),
     ),
     );
   }

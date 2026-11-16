@@ -10,7 +10,11 @@ This is the native rebuild of the Salli money manager. It signs in to **the same
 
 If a build turns red: open the failed step, copy the red error lines (or screenshot them) and send them to Claude to fix.
 
-## 2.3.0 (this version)
+## 2.3.1 (this version)
+- **Lendings in the dashboard use the lending's own rate:** the money lent, cash received back and "settled against expense" entries (both the settle line and the expense) are now shown in the main currency at the agreed rate entered for that lending — on Home (Cash In / Cash Out / Net Cash Flow), in transaction lists and day totals. Lendings without an agreed rate still use the app rate.
+- **+ button:** sits a little higher and is no longer cut off at the top; the bottom bar keeps its size.
+
+## 2.3.0
 - **Apple design (new default):** follows Apple's design guidance — iOS system colours (system blue tint, green / red / orange), grouped white cards on light grey (true black + #1C1C1E in dark mode), hairline separators, 17pt semibold centred titles with blue back / action buttons, tighter tracking on large text, 12–16pt rounded controls, iOS-style switches, segmented controls, sheets and dialogs, no Material ripples (soft highlight on touch-down instead).
 - **iOS page motion:** pages push in from the right with the page underneath sliding back, and you can **swipe from the left edge to go back** — the page follows your finger 1:1 and can be stopped or reversed mid-way.
 - **App style switch:** Settings → Appearance → **App Style**: Apple / Glass / Classic. Apple follows Light / Dark / System. Only the look changed — every feature works the same.
