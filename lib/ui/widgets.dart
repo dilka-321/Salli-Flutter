@@ -1,9 +1,11 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/currency.dart';
 import '../core/store.dart';
 import '../core/util.dart';
+import 'lock_screen.dart';
 import 'theme.dart';
 
 /// Gives every screen access to the store and rebuilds it on changes.
@@ -39,7 +41,15 @@ class _GlassCardState extends State<GlassCard> {
     final onTap = widget.onTap;
     final box = Container(
       margin: widget.margin,
-      decoration: p.glass
+      decoration: p.apple
+          // Apple: plain grouped card — white (or #1C1C1E), 16pt corners, no border, barely-there shadow
+          ? BoxDecoration(
+              color: widget.gradient == null ? p.card : null,
+              gradient: widget.gradient,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: dark ? null : [BoxShadow(color: Colors.black.withOpacity(.04), blurRadius: 10, offset: const Offset(0, 2))],
+            )
+          : p.glass
           // frosted glass: milky white, bright rim, soft warm shadow
           ? BoxDecoration(
               gradient: widget.gradient ??
@@ -60,7 +70,7 @@ class _GlassCardState extends State<GlassCard> {
       child: Material(
         type: MaterialType.transparency,
         child: InkWell(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(p.apple ? 16 : 24),
           onTapDown: onTap == null ? null : (_) => _press(true),
           onTapCancel: onTap == null ? null : () => _press(false),
           onTapUp: onTap == null ? null : (_) => _press(false),
@@ -232,8 +242,25 @@ void toast(BuildContext c, String msg) {
     ..showSnackBar(SnackBar(content: Text(msg), duration: const Duration(seconds: 2)));
 }
 
-/// Fast, smooth slide-and-fade route used for every page (the page underneath glides back a little).
-Route<T> pageRoute<T>(Widget page) => PageRouteBuilder<T>(
+/// iOS page push: full slide from the right with the page underneath moving back by a third, plus the
+/// edge swipe-back gesture (drag from the left edge to go back, following your finger 1:1).
+class _ApplePageRoute<T> extends CupertinoPageRoute<T> {
+  _ApplePageRoute({required super.builder});
+  @override
+  Duration get transitionDuration => const Duration(milliseconds: 380);
+  @override
+  Duration get reverseTransitionDuration => const Duration(milliseconds: 320);
+}
+
+/// Page route used for every page: Apple style → iOS push with swipe-back; other styles → fast slide-and-fade.
+Route<T> pageRoute<T>(Widget page) {
+  final ctx = rootNavKey.currentContext;
+  final apple = ctx != null && (Theme.of(ctx).extension<Palette>()?.apple ?? false);
+  if (apple) return _ApplePageRoute<T>(builder: (_) => page);
+  return _fadeRoute<T>(page);
+}
+
+Route<T> _fadeRoute<T>(Widget page) => PageRouteBuilder<T>(
       transitionDuration: const Duration(milliseconds: 300),
       reverseTransitionDuration: const Duration(milliseconds: 250),
       // glass look: each page carries the warm backdrop, so pages never show through each other while sliding

@@ -36,15 +36,17 @@ class SalliApp extends StatelessWidget {
         final acc = set is Map ? set['accent'] : null;
         final accentId = acc is Map ? '${acc['id'] ?? 'emerald'}' : (acc is String ? acc : 'emerald');
         final mode = themeName == 'dark' ? ThemeMode.dark : themeName == 'light' ? ThemeMode.light : ThemeMode.system;
-        // warm frosted-glass look (Settings → Appearance → Glass style); on unless switched off
-        final glass = !(set is Map && set['uiGlass'] == false);
+        // App style (Settings → Appearance): 'apple' (default), 'glass' (warm frosted) or 'classic'
+        final style = set is Map && set['uiStyle'] is String ? '${set['uiStyle']}' : 'apple';
+        final glass = style == 'glass';
+        final apple = style == 'apple';
         return MaterialApp(
           title: AppConfig.appName,
           debugShowCheckedModeBanner: false,
           navigatorKey: rootNavKey,
           themeMode: glass ? ThemeMode.light : mode,
-          theme: buildTheme(Brightness.light, accentId, glass: glass),
-          darkTheme: buildTheme(Brightness.dark, accentId, glass: glass),
+          theme: buildTheme(Brightness.light, accentId, glass: glass, apple: apple),
+          darkTheme: buildTheme(Brightness.dark, accentId, glass: glass, apple: apple),
           builder: (context, child) {
             final dark = Theme.of(context).brightness == Brightness.dark;
             return AnnotatedRegion<SystemUiOverlayStyle>(

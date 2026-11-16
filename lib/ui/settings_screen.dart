@@ -194,26 +194,23 @@ class SettingsScreen extends StatelessWidget {
           onSelectionChanged: (v) => s.setTheme(v.first),
         ),
         const SizedBox(height: 10),
-        GlassCard(
-          padding: const EdgeInsets.fromLTRB(16, 6, 8, 6),
-          child: Row(children: [
-            Icon(Icons.blur_on_rounded, color: p.accent),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Glass style', style: TextStyle(fontWeight: FontWeight.w700)),
-                Text('Warm frosted look. Turn off to use Light / Dark / System and your accent colour.', style: TextStyle(color: p.muted, fontSize: 12)),
-              ]),
-            ),
-            Switch(
-              value: s.settings['uiGlass'] != false,
-              onChanged: (v) {
-                HapticFeedback.selectionClick();
-                s.settings['uiGlass'] = v;
-                s.commit();
-              },
-            ),
-          ]),
+        _sec(p, 'App Style'),
+        SegmentedButton<String>(
+          segments: const [
+            ButtonSegment(value: 'apple', label: Text('Apple'), icon: Icon(Icons.phone_iphone_rounded)),
+            ButtonSegment(value: 'glass', label: Text('Glass'), icon: Icon(Icons.blur_on_rounded)),
+            ButtonSegment(value: 'classic', label: Text('Classic'), icon: Icon(Icons.palette_outlined)),
+          ],
+          selected: {s.settings['uiStyle'] is String ? '${s.settings['uiStyle']}' : 'apple'},
+          onSelectionChanged: (v) {
+            HapticFeedback.selectionClick();
+            s.settings['uiStyle'] = v.first;
+            s.commit();
+          },
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 6, 4, 0),
+          child: Text('Apple: iOS look with swipe-back pages (follows Light / Dark / System, blue tint). Glass: warm frosted look. Classic: your accent colour below.', style: TextStyle(color: p.muted, fontSize: 12)),
         ),
         _sec(p, 'Accent Color'),
         GlassCard(

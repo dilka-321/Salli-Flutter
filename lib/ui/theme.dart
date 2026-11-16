@@ -19,8 +19,12 @@ class Palette extends ThemeExtension<Palette> {
 
   /// true for the warm frosted-glass look (translucent cards over a soft warm backdrop)
   final bool glass;
+
+  /// true for the Apple (iOS) look: system colours, grouped white cards, iOS bars, swipe-back pages
+  final bool apple;
   const Palette({
     this.glass = false,
+    this.apple = false,
     required this.bg,
     required this.card,
     required this.card2,
@@ -46,12 +50,46 @@ class Palette extends ThemeExtension<Palette> {
 /// Coral accent of the glass look.
 const kGlassAccent = Color(0xFFE2553A);
 
-ThemeData buildTheme(Brightness b, String accentId, {bool glass = false}) {
+ThemeData buildTheme(Brightness b, String accentId, {bool glass = false, bool apple = false}) {
   if (glass) b = Brightness.light;
+  if (glass) apple = false;
   final dark = b == Brightness.dark;
   final tones = kAccents[accentId] ?? kAccents['emerald']!;
-  final accent = glass ? kGlassAccent : (dark ? tones.$2 : tones.$1);
-  final p = glass
+  // Apple: iOS system blue tint (systemBlue), like built-in iPhone apps
+  final accent = glass ? kGlassAccent : apple ? (dark ? const Color(0xFF0A84FF) : const Color(0xFF007AFF)) : (dark ? tones.$2 : tones.$1);
+  final p = apple
+      ? (dark
+          // iOS dark: systemBackground black, secondarySystemGrouped #1C1C1E, separator, label colours
+          ? Palette(
+              apple: true,
+              bg: Colors.black,
+              card: const Color(0xFF1C1C1E),
+              card2: const Color(0xFF2C2C2E),
+              line: const Color(0x99545458),
+              fg: Colors.white,
+              muted: const Color(0xFF8E8E93),
+              accent: accent,
+              accentInk: Colors.white,
+              pos: const Color(0xFF30D158),
+              neg: const Color(0xFFFF453A),
+              warn: const Color(0xFFFF9F0A),
+            )
+          // iOS light: systemGroupedBackground #F2F2F7 with white grouped cards
+          : Palette(
+              apple: true,
+              bg: const Color(0xFFF2F2F7),
+              card: Colors.white,
+              card2: const Color(0xFFF2F2F7),
+              line: const Color(0x2E3C3C43),
+              fg: Colors.black,
+              muted: const Color(0xFF8A8A8E),
+              accent: accent,
+              accentInk: Colors.white,
+              pos: const Color(0xFF248A3D),
+              neg: const Color(0xFFFF3B30),
+              warn: const Color(0xFFC93400),
+            ))
+      : glass
       ? const Palette(
           glass: true,
           bg: Color(0xFFF4E6DF),
@@ -102,6 +140,7 @@ ThemeData buildTheme(Brightness b, String accentId, {bool glass = false}) {
   );
   final base = ThemeData(useMaterial3: true, colorScheme: scheme, brightness: b);
   const sheet = Color(0xFFFBF2EE);
+  if (apple) return _appleTheme(base, p, dark);
   return base.copyWith(
     scaffoldBackgroundColor: glass ? Colors.transparent : p.bg,
     canvasColor: glass ? sheet : null,
@@ -204,4 +243,121 @@ class _Blob extends StatelessWidget {
           decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [color, color.withOpacity(0)])),
         ),
       );
+}
+
+
+/// Apple (iOS) look — follows Apple's Human Interface Guidelines: grouped backgrounds, hairline separators,
+/// 17pt semibold centred navigation titles, tight tracking on large text, 12pt-radius controls, iOS switch colours.
+ThemeData _appleTheme(ThemeData base, Palette p, bool dark) {
+  final t = base.textTheme.apply(bodyColor: p.fg, displayColor: p.fg);
+  TextStyle? tight(TextStyle? x, double ls) => x?.copyWith(letterSpacing: ls);
+  final text = t.copyWith(
+    displayLarge: tight(t.displayLarge, -1.2),
+    displayMedium: tight(t.displayMedium, -1),
+    displaySmall: tight(t.displaySmall, -.8),
+    headlineLarge: tight(t.headlineLarge, -.7),
+    headlineMedium: tight(t.headlineMedium, -.6),
+    headlineSmall: tight(t.headlineSmall, -.5),
+    titleLarge: tight(t.titleLarge, -.4),
+    titleMedium: tight(t.titleMedium, -.3),
+    bodyLarge: tight(t.bodyLarge, -.2),
+    bodyMedium: tight(t.bodyMedium, -.1),
+  );
+  final r12 = BorderRadius.circular(12);
+  return base.copyWith(
+    scaffoldBackgroundColor: p.bg,
+    canvasColor: p.bg,
+    extensions: [p],
+    textTheme: text,
+    splashFactory: NoSplash.splashFactory, // iOS highlights instead of Material ripples
+    highlightColor: p.fg.withOpacity(.06),
+    appBarTheme: AppBarTheme(
+      backgroundColor: p.bg,
+      surfaceTintColor: Colors.transparent,
+      foregroundColor: p.accent,
+      iconTheme: IconThemeData(color: p.accent),
+      actionsIconTheme: IconThemeData(color: p.accent),
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      centerTitle: true,
+      titleTextStyle: TextStyle(color: p.fg, fontSize: 17, fontWeight: FontWeight.w600, letterSpacing: -.4),
+    ),
+    dividerColor: p.line,
+    dividerTheme: DividerThemeData(color: p.line, thickness: .5, space: 1),
+    iconTheme: IconThemeData(color: p.fg),
+    listTileTheme: ListTileThemeData(iconColor: p.accent, textColor: p.fg),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: dark ? const Color(0xFF1C1C1E) : const Color(0xFFE9E9EE),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      border: OutlineInputBorder(borderRadius: r12, borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(borderRadius: r12, borderSide: BorderSide.none),
+      focusedBorder: OutlineInputBorder(borderRadius: r12, borderSide: BorderSide(color: p.accent, width: 1.4)),
+      labelStyle: TextStyle(color: p.muted),
+      hintStyle: TextStyle(color: p.muted),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: p.accent,
+        foregroundColor: Colors.white,
+        minimumSize: const Size.fromHeight(50),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, letterSpacing: -.4),
+        splashFactory: NoSplash.splashFactory,
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: p.accent,
+        backgroundColor: p.card,
+        minimumSize: const Size.fromHeight(50),
+        side: BorderSide.none,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, letterSpacing: -.4),
+        splashFactory: NoSplash.splashFactory,
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: p.accent, textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, letterSpacing: -.3), splashFactory: NoSplash.splashFactory),
+    ),
+    switchTheme: SwitchThemeData(
+      // iOS switch colours: green track when on, white thumb
+      thumbColor: const WidgetStatePropertyAll(Colors.white),
+      trackColor: WidgetStateProperty.resolveWith((st) => st.contains(WidgetState.selected) ? (dark ? const Color(0xFF30D158) : const Color(0xFF34C759)) : (dark ? const Color(0xFF39393D) : const Color(0xFFE9E9EA))),
+      trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+    ),
+    chipTheme: ChipThemeData(backgroundColor: p.card, side: BorderSide.none, shape: const StadiumBorder(), labelStyle: TextStyle(color: p.fg, fontWeight: FontWeight.w500)),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: SegmentedButton.styleFrom(
+        backgroundColor: dark ? const Color(0xFF1C1C1E) : const Color(0xFFE9E9EE),
+        selectedBackgroundColor: p.card,
+        selectedForegroundColor: p.fg,
+        side: BorderSide.none,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+      ),
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: dark ? const Color(0xFF1C1C1E) : const Color(0xFFF2F2F7),
+      surfaceTintColor: Colors.transparent,
+      showDragHandle: true,
+      dragHandleColor: p.muted.withOpacity(.5),
+      dragHandleSize: const Size(36, 5),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(14))),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: dark ? const Color(0xFF2C2C2E) : const Color(0xFFF7F7F9),
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      titleTextStyle: TextStyle(color: p.fg, fontSize: 17, fontWeight: FontWeight.w600, letterSpacing: -.4),
+    ),
+    popupMenuTheme: PopupMenuThemeData(color: dark ? const Color(0xFF2C2C2E) : Colors.white, surfaceTintColor: Colors.transparent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+    drawerTheme: DrawerThemeData(backgroundColor: p.bg, surfaceTintColor: Colors.transparent),
+    progressIndicatorTheme: ProgressIndicatorThemeData(color: p.accent),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: dark ? const Color(0xF22C2C2E) : const Color(0xF21C1C1E),
+      contentTextStyle: const TextStyle(color: Colors.white, fontSize: 15, letterSpacing: -.2),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    ),
+  );
 }

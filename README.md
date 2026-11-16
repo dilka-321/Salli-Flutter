@@ -10,7 +10,12 @@ This is the native rebuild of the Salli money manager. It signs in to **the same
 
 If a build turns red: open the failed step, copy the red error lines (or screenshot them) and send them to Claude to fix.
 
-## 2.2.0 (this version)
+## 2.3.0 (this version)
+- **Apple design (new default):** follows Apple's design guidance — iOS system colours (system blue tint, green / red / orange), grouped white cards on light grey (true black + #1C1C1E in dark mode), hairline separators, 17pt semibold centred titles with blue back / action buttons, tighter tracking on large text, 12–16pt rounded controls, iOS-style switches, segmented controls, sheets and dialogs, no Material ripples (soft highlight on touch-down instead).
+- **iOS page motion:** pages push in from the right with the page underneath sliding back, and you can **swipe from the left edge to go back** — the page follows your finger 1:1 and can be stopped or reversed mid-way.
+- **App style switch:** Settings → Appearance → **App Style**: Apple / Glass / Classic. Apple follows Light / Dark / System. Only the look changed — every feature works the same.
+
+## 2.2.0
 - **New look — Glass style:** warm frosted design like the reference video: soft warm backdrop behind every page, milky translucent cards with bright edges and soft shadows, coral accent, a coral "Net Cash Flow" hero card on Home, and numbers that count up smoothly (Net Cash Flow, Cash In, Cash Out, All Accounts Balance). It's on by default; **Settings → Appearance → Glass style** turns it off to go back to Light / Dark / System with your accent colour. Only the look changed — every feature works the same.
 
 ## 2.1.1

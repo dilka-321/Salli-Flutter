@@ -91,6 +91,8 @@ class HomeScreen extends StatelessWidget {
                 gradient: p.glass
                     // glass look: warm coral hero card
                     ? const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xF2F0785C), Color(0xF2D9442E)])
+                    : p.apple
+                    ? null // Apple: clean white card
                     : LinearGradient(
                         begin: Alignment.topRight,
                         end: Alignment.bottomLeft,
