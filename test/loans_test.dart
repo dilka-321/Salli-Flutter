@@ -89,6 +89,14 @@ void main() {
     expect(s.tBase(s.txns.firstWhere((t) => t['kind'] == 'lend_offset')), 100);
   });
 
+  test('lending settled in the main currency shows the exact amount typed (no rounding drift)', () {
+    final id = s.saveLending(name: 'Dilka', currency: 'MVR', amount: 3000, accId: 'mv', due: '2026-12-01', note: '', rates: {'LKR': 14.9318}, rateDir: {'LKR': false});
+    s.settleLendingAgainstExpense(id, v: 20000, cur: 'LKR', catId: 'bc', date: today(), note: '');
+    final e = s.txns.firstWhere((t) => t['catId'] == 'bc');
+    expect(s.tBase(e), 20000);
+    expect(s.tBase(s.txns.firstWhere((t) => t['kind'] == 'lend_offset')), 20000);
+  });
+
   test('settle lending against an expense: lending goes down, expense booked, balance unchanged', () {
     final id = s.saveLending(name: 'Ali', currency: 'LKR', amount: 5000, accId: 'lk', due: '2026-12-01', note: '');
     final x = s.lending(id)!;

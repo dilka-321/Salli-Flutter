@@ -519,7 +519,36 @@ class AppStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   /// value of a transaction in the main currency
+  /// A lending entry (with an agreed rate) in the main currency, worked out from the exact amount
+  /// entered in the lending's own currency — not from the account amount, which is rounded to cents
+  /// and would come back as e.g. 19,999.98 instead of 20,000.
+  double? _lendBase(J t) {
+    final link = t['link'];
+    final lid = link is Map ? (link['lend'] ?? link['lendExp'])?.toString() : null;
+    final k = t['kind'];
+    if (lid == null && k != 'lend_give' && k != 'lend_receive' && k != 'lend_offset') return null;
+    final L = data['lendings'];
+    if (L is! List) return null;
+    for (final x in L) {
+      if (x is! Map<String, dynamic>) continue;
+      final rr = x['rates'];
+      if (rr is! Map || rr.isEmpty) continue;
+      final c = (x['currency'] ?? base).toString();
+      for (final p in (x['payments'] as List?) ?? const []) {
+        if (p is Map && (p['txId'] == t['id'] || p['expTxId'] == t['id'])) {
+          // the amount exactly as typed (e.g. Rs 20,000), else the lending-currency amount
+          if (p['paid'] != null) return lconv(x, toD(p['paid']), (p['payCur'] ?? c).toString(), base);
+          if (p['amount'] != null) return lconv(x, toD(p['amount']), c, base);
+        }
+      }
+      if (k == 'lend_give' && lid != null && x['id'] == lid) return lconv(x, toD(x['amount']), c, base);
+    }
+    return null;
+  }
+
   double tBase(J t) {
+    final lb = _lendBase(t);
+    if (lb != null) return round2(lb);
     final l = _loanOfTx(t);
     final from = accCur(t['accId']);
     return l != null ? lconv(l, toD(t['amount']), from, base) : conv(toD(t['amount']), from, base);

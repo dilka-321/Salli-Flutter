@@ -10,7 +10,10 @@ This is the native rebuild of the Salli money manager. It signs in to **the same
 
 If a build turns red: open the failed step, copy the red error lines (or screenshot them) and send them to Claude to fix.
 
-## 2.3.1 (this version)
+## 2.3.2 (this version)
+- **Lending amounts are exact on the dashboard:** a lending settlement (cash or against expenses) now shows exactly the amount you typed — e.g. Rs 20,000.00, not Rs 19,999.98. It's worked out from the amount entered, not from the account amount (which is rounded to cents in the account's currency). Existing entries are corrected too.
+
+## 2.3.1
 - **Lendings in the dashboard use the lending's own rate:** the money lent, cash received back and "settled against expense" entries (both the settle line and the expense) are now shown in the main currency at the agreed rate entered for that lending — on Home (Cash In / Cash Out / Net Cash Flow), in transaction lists and day totals. Lendings without an agreed rate still use the app rate.
 - **+ button:** sits a little higher and is no longer cut off at the top; the bottom bar keeps its size.
 
